@@ -43,15 +43,24 @@ html, body {
   -ms-overflow-style: none !important;
 }
 
-/* React Flow custom styling */
-.react-flow__node {
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+/* React Flow custom styling - Contenedores transparentes sin recuadro rectangular */
+.react-flow__node,
+.react-flow__node-bankingNode {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
   transition: all 0.2s ease;
 }
-.react-flow__node:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
+.react-flow__node:hover,
+.react-flow__node-bankingNode:hover {
+  box-shadow: none !important;
+  transform: none !important;
+}
+.react-flow__node.selectable:focus,
+.react-flow__node.selectable:focus-visible {
+  outline: none !important;
 }
 .react-flow__edge-path {
   stroke: #3299A8 !important;

@@ -377,9 +377,6 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
                         >
                           <div className="flex justify-between items-start text-[10px] font-bold opacity-80">
                             <span>{score} pts</span>
-                            <span className="font-mono">
-                              {prob.level}×{imp.level}
-                            </span>
                           </div>
 
                           {/* Chips de Riesgos y Nodos del Flujo */}
@@ -706,9 +703,6 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
                         >
                           <div className="flex justify-between items-start text-[10px] font-bold opacity-75">
                             <span>{score} pts</span>
-                            <span>
-                              {prob.level}×{imp.level}
-                            </span>
                           </div>
 
                           <div className="text-center">

@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   title: "Herramienta Inteligente de Gestión de Riesgos Relevantes y Emergentes — Banco Ve por Más (B×+)",
   description:
     "Plataforma integral de administración de riesgos bancarios bajo regulación CNBV, CUB, NIF C-16, Basilea III y Taxonomía Sostenible SHCP, con B×+ Risk Copilot (Gemini AI).",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

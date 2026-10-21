@@ -77,3 +77,19 @@ Aunque la plataforma es **100% funcional, estable y visualmente fiel a B×+**, c
   3. **Formulario Matemático Auditable (`FORMULAS`):** Las 6 ecuaciones maestras referenciadas a sus archivos en `src/lib/engines/` y `src/lib/audit.ts`.
   4. **Ciclo de Vida y Gobernanza 3LD (`GOVERNANCE`):** Las 4 vías de captura y el flujo de aprobación entre 1ª, 2ª y 3ª Línea de Defensa.
   5. **Calculadora Pedagógica en Vivo (`SANDBOX`):** Simulador interactivo conectado directamente a [`evaluateControlEffectiveness`](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/lib/engines/operational-risk-engine.ts) y [`calculateOperationalRiskMetrics`](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/lib/engines/operational-risk-engine.ts).
+
+
+---
+
+## 9. Dictamen de Verificación — Alineación Integral por Procesos, Diagramador Avanzado IA y Marco RAF (Commit `91a4305`)
+
+**Fecha de Verificación:** 21 de Octubre de 2026  
+**Resultado:** **100% VERIFICADO, TIPADO (`npx tsc --noEmit` CON 0 ERRORES) Y OPERATIVO**
+
+| Componente / Mejora | Archivos Auditados | Evidencia en Código Fuente | Estado |
+| :--- | :--- | :--- | :---: |
+| **1. Matriz 5×5 por Proceso Individual, Mosaico Comparativo y Trazabilidad de Nodos** | [HeatmapView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/HeatmapView.tsx) y [route.ts](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/app/api/risks/route.ts) | 3 modos (`SINGLE_PROCESS`, `MOSAIC`, `INSTITUTIONAL` en líneas 33–35). En modo por proceso, cada celda $(P \times I)$ renderiza los chips individuales con código y nodo (`r.code • r.processNode.label` en líneas 387–400), y el panel derecho muestra el **Mapa de Trazabilidad del Proceso** nodo por nodo contrastando `Inh -> Res` (líneas 428–529). | ✅ **100% Verificado** |
+| **2. Matriz Viva Agrupada por Proceso y Nodo del Diagrama** | [RiskAdminView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/RiskAdminView.tsx) | Selector de proceso (`selectedProcessId`), vista `"Por Procesos"` (`viewLayout === "GROUPED"` activa por defecto en línea 40) con cabeceras por proceso que calculan `groupPEA` y `groupPMA` (líneas 510–575) y columna explícita `"Nodo del Diagramador"` (`Workflow` + `nodeLabel` + `nodeType` en líneas 256–268). | ✅ **100% Verificado** |
+| **3. Planes & Quick-Wins Filtrados y Etiquetados por Proceso y Nodo** | [ActionPlansView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/ActionPlansView.tsx) | Selector `"Filtrar por Proceso"` en cabecera (líneas 261–277) y etiquetas de Proceso (`plan.riskEvent.process.code`) y Nodo (`plan.riskEvent.processNode.label`) en cada tarjeta Quick-Win y fila de la tabla (líneas 347–362). | ✅ **100% Verificado** |
+| **4. Marco RAF en el Módulo Marco Teórico** | [MethodologyView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/MethodologyView.tsx) | Sub-sección `"2. Marco RAF (Apetito al Riesgo CNBV)"` (`RAF_FRAMEWORK` en líneas 389–399 y 571–960+) con fundamento CUB Art. 67, 68 y 88, los **4 Escalones Jerárquicos ("El Velocímetro Prudencial")** y la **Tabla Maestra de Umbrales Prudenciales B×+** (`ICAP`, `CET1`, `CCL`, `VaR 99%`, `SPEI`, `Matriz 5×5`). | ✅ **100% Verificado** |
+| **5. Diagramador Avanzado con IA Conversacional, Figuras Miro/Canva (`+`) y Evaluador Cross-Process** | [FlowchartView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/FlowchartView.tsx) | 2,523 líneas con siluetas geométricas diferenciadas (`START_END`, `TASK_STEP`, `DECISION_GATEWAY` con ramas Sí/No, `CONTROL_POINT`, `FRAUD_CHECKPOINT`, `EXTERNAL_SYSTEM`), botón `+` in-situ, generador conversacional de procesos con IA, evaluador de riesgos IA de proceso completo y eliminación segura de procesos con confirmación modal y sello `SHA-256`. | ✅ **100% Verificado** |

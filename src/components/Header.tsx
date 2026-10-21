@@ -60,18 +60,18 @@ export function Header({
           className="flex items-center space-x-3 cursor-pointer"
           onClick={() => setActiveTab("dashboard")}
         >
-          <div className="flex items-center tracking-tight font-serif text-2xl font-bold text-white">
-            <span>B</span>
-            <span className="text-gray-400 font-sans mx-0.5">×</span>
-            <span className="text-[#C0D725] text-3xl leading-none font-sans font-black">+</span>
-          </div>
+          <img
+            src="/log_Bx+.svg"
+            alt="Banco Ve por Más"
+            className="h-8 md:h-9 w-auto object-contain"
+          />
           <div className="h-6 w-[1px] bg-gray-700 hidden sm:block" />
           <div className="hidden sm:block">
             <div className="text-xs font-semibold text-gray-200 tracking-wide uppercase">
               Banco Ve por Más
             </div>
             <div className="text-[10px] text-[#C0D725] tracking-wider font-mono">
-              RIESGOS RELEVANTES Y EMERGENTES
+              Herramienta Inteligente para la Gestión de Riesgos Relevantes y Emergentes
             </div>
           </div>
         </div>

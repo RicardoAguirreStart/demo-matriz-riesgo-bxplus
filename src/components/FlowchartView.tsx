@@ -58,96 +58,334 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
 
   // Parsear styleConfig si viene como string
   const config = typeof styleConfig === "string" ? JSON.parse(styleConfig || "{}") : styleConfig || {};
+  const isSelected = selected;
+  const isSodAlert = hasSodViolation && sodAuditActive;
 
-  // Configuración de estilo geométrico según nodeType
-  let shapeClasses = "rounded-md border-2 border-gray-400 bg-white";
-  let headerBg = "bg-gray-100 text-gray-800";
-  let typeSymbol = "▭";
-  let typeLabel = "PASO OPERATIVO";
+  // Color de borde y silueta SVG según estado
+  const strokeColor = isSelected
+    ? "#C0D725"
+    : isSodAlert
+    ? "#E11D48"
+    : nodeType === "START_END"
+    ? "#10B981"
+    : nodeType === "DECISION_GATEWAY"
+    ? "#4F46E5"
+    : nodeType === "CONTROL_POINT"
+    ? "#0D9488"
+    : nodeType === "FRAUD_CHECKPOINT"
+    ? "#D97706"
+    : nodeType === "EXTERNAL_SYSTEM"
+    ? "#7C3AED"
+    : "#374151";
 
+  const strokeWidth = isSelected ? "3.5" : "2.5";
+
+  // Botón "+" Estilo Miro / Canva para añadir y conectar siguiente figura
+  const renderAddNextBtn = (rightOffset = "-right-3.5") => (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onAddNext?.(id, nodeType, label);
+      }}
+      className={`nodrag absolute ${rightOffset} top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#1F242B] hover:bg-[#C0D725] text-white hover:text-[#1F242B] border-2 border-white shadow-md flex items-center justify-center text-xs font-black transition-all hover:scale-110 z-30 cursor-pointer`}
+      title="Agregar siguiente figura conectada en el flujo"
+    >
+      +
+    </button>
+  );
+
+  // Insignia de Riesgos y PMA
+  const renderRiskBadge = () => (
+    <div className="flex flex-wrap gap-1 items-center justify-center pt-1">
+      {riskCount > 0 ? (
+        <span
+          className={`text-[9px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 font-semibold ${getZoneBadgeClasses(
+            maxResidualZone
+          )}`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+              maxResidualZone === "GREEN"
+                ? "bg-emerald-600"
+                : maxResidualZone === "YELLOW"
+                ? "bg-amber-500"
+                : maxResidualZone === "ORANGE"
+                ? "bg-orange-600"
+                : "bg-rose-600"
+            }`}
+          />
+          <span>{riskCount} {riskCount === 1 ? "Riesgo" : "Riesgos"}</span>
+        </span>
+      ) : (
+        <span className="text-[9px] font-mono text-gray-400 bg-gray-50 px-1 py-0.5 rounded-[3px] border border-gray-200">
+          0 riesgos
+        </span>
+      )}
+      {totalPMA > 0 && (
+        <span className="text-[9px] font-bold font-mono text-orange-800">
+          PMA: {formatMXN(totalPMA)}
+        </span>
+      )}
+    </div>
+  );
+
+  // ==========================================================================
+  // FIGURA 1: ÓVALO / PÍLDORA TERMINADOR (START_END)
+  // ==========================================================================
   if (nodeType === "START_END") {
-    shapeClasses = "rounded-3xl border-2 border-emerald-500 bg-emerald-50/10";
-    headerBg = "bg-emerald-600 text-white";
-    typeSymbol = "◯";
-    typeLabel = config.stage === "END" ? "FIN DE PROCESO" : "INICIO DE PROCESO";
-  } else if (nodeType === "DECISION_GATEWAY") {
-    // Rombo / Compuerta de Decisión en Índigo
-    shapeClasses = "rounded-md border-2 border-indigo-600 bg-indigo-50/20 shadow-md";
-    headerBg = "bg-indigo-700 text-white";
-    typeSymbol = "◆";
-    typeLabel = "COMPUERTA DE DECISIÓN";
-  } else if (nodeType === "CONTROL_POINT") {
-    // Hexágono / Punto de Control en Turquesa B×+
-    shapeClasses = "rounded-md border-2 border-[#3299A8] bg-cyan-50/20";
-    headerBg = "bg-[#3299A8] text-white";
-    typeSymbol = "⬡";
-    typeLabel = "PUNTO DE CONTROL (CUB)";
-  } else if (nodeType === "FRAUD_CHECKPOINT") {
-    // Control de Fraude Anexo 12-E en Ámbar
-    shapeClasses = "rounded-md border-2 border-amber-600 bg-amber-50/20";
-    headerBg = "bg-amber-600 text-white";
-    typeSymbol = "⛨";
-    typeLabel = "CONTROL DE FRAUDE (12-E)";
-  } else if (nodeType === "EXTERNAL_SYSTEM") {
-    // Bloque Técnico de Sistema TI / API en Púrpura
-    shapeClasses = "rounded-md border-2 border-purple-600 bg-purple-50/20 font-mono";
-    headerBg = "bg-purple-700 text-white";
-    typeSymbol = "▱";
-    typeLabel = "SISTEMA TI / API CORE";
+    const isEnd = config.stage === "END" || label?.toLowerCase().includes("fin") || label?.toLowerCase().includes("cierre") || label?.toLowerCase().includes("termina");
+    return (
+      <div
+        className={`relative w-[280px] rounded-full border-2 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/90 shadow-md p-3.5 transition-all text-xs flex flex-col items-center justify-center text-center ${
+          isSelected ? "ring-2 ring-[#C0D725] shadow-lg border-[#C0D725]" : isSodAlert ? "border-rose-600" : "border-emerald-500"
+        }`}
+      >
+        <Handle type="target" position={Position.Left} className="w-3 h-3 bg-[#10B981] border-2 border-white -ml-1 z-20" />
+        <div className="w-full max-w-[230px] space-y-1">
+          <span className="inline-block bg-emerald-600 text-white text-[9px] font-mono font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+            ◯ {isEnd ? "FIN DE PROCESO" : "INICIO DE PROCESO"}
+          </span>
+          <div className="font-bold text-gray-900 text-xs leading-snug line-clamp-2">
+            {label}
+          </div>
+          {responsibleRole && (
+            <div className="text-[10px] text-gray-500 font-medium truncate">
+              {responsibleRole} {systemUsed ? `• ${systemUsed}` : ""}
+            </div>
+          )}
+          {renderRiskBadge()}
+        </div>
+        <Handle type="source" position={Position.Right} className="w-3 h-3 bg-[#10B981] border-2 border-white -mr-1 z-20" />
+        {renderAddNextBtn("-right-3")}
+      </div>
+    );
   }
 
-  if (hasSodViolation && sodAuditActive) {
-    shapeClasses += " border-rose-600 ring-2 ring-rose-500 ring-offset-1 shadow-rose-100";
+  // ==========================================================================
+  // FIGURA 2: ROMBO / DIAMANTE DE DECISIÓN (DECISION_GATEWAY)
+  // ==========================================================================
+  if (nodeType === "DECISION_GATEWAY") {
+    return (
+      <div className="relative w-[310px] h-[250px] flex items-center justify-center transition-all select-none">
+        {/* Silueta geométrica SVG Rombo */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 250">
+          <polygon
+            points="155,6 304,125 155,244 6,125"
+            fill="#F5F7FF"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        <Handle type="target" position={Position.Left} style={{ left: 6, top: "50%" }} className="w-3 h-3 bg-[#4F46E5] border-2 border-white z-20" />
+
+        {/* Contenido en el centro del rombo */}
+        <div className="relative z-10 w-[190px] text-center space-y-1 px-1">
+          <span className="inline-block bg-indigo-700 text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-xs">
+            ◆ DECISIÓN
+          </span>
+          <div className="font-bold text-indigo-950 text-xs leading-snug line-clamp-2 font-serif">
+            {config.decisionQuestion || label}
+          </div>
+
+          {/* Ramas Sí y No */}
+          <div className="bg-white/95 border border-indigo-200/90 rounded p-1.5 text-[9px] space-y-0.5 text-left shadow-xs">
+            <div className="text-emerald-800 font-bold truncate flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block shrink-0" />
+              <span>Sí: {config.yesCriteria || "Aprobación"}</span>
+            </div>
+            <div className="text-amber-800 font-bold truncate flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 inline-block shrink-0" />
+              <span>No: {config.noCriteria || "Escalamiento"}</span>
+            </div>
+          </div>
+
+          {renderRiskBadge()}
+        </div>
+
+        <Handle type="source" position={Position.Right} style={{ right: 6, top: "50%" }} className="w-3 h-3 bg-[#4F46E5] border-2 border-white z-20" />
+        {renderAddNextBtn("-right-2")}
+      </div>
+    );
   }
 
+  // ==========================================================================
+  // FIGURA 3: HEXÁGONO DE PUNTO DE CONTROL (CONTROL_POINT)
+  // ==========================================================================
+  if (nodeType === "CONTROL_POINT") {
+    return (
+      <div className="relative w-[310px] h-[200px] flex items-center justify-center transition-all select-none">
+        {/* Silueta geométrica SVG Hexágono */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 200">
+          <polygon
+            points="45,6 265,6 304,100 265,194 45,194 6,100"
+            fill="#F0FDFA"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        <Handle type="target" position={Position.Left} style={{ left: 6, top: "50%" }} className="w-3 h-3 bg-[#0D9488] border-2 border-white z-20" />
+
+        {/* Contenido en el centro del hexágono */}
+        <div className="relative z-10 w-[215px] text-center space-y-1 px-1">
+          <div className="flex items-center justify-center gap-1.5 border-b border-teal-200/80 pb-1 mb-0.5">
+            <span className="text-[10px] font-mono font-bold text-teal-900 uppercase">
+              ⬡ PUNTO DE CONTROL (CUB)
+            </span>
+            <span className="text-[9px] font-mono bg-[#0D9488] text-white px-1.5 py-0.2 rounded font-bold shadow-xs">
+              {config.isFormalized ? "F" : "NF"}
+            </span>
+          </div>
+
+          <div className="font-bold text-gray-900 text-xs leading-snug line-clamp-2">
+            {label}
+          </div>
+
+          <div className="text-[10px] text-gray-600 truncate">
+            {responsibleRole || "2ª Línea UAIR"} {systemUsed ? `• ${systemUsed}` : ""}
+          </div>
+
+          {renderRiskBadge()}
+        </div>
+
+        <Handle type="source" position={Position.Right} style={{ right: 6, top: "50%" }} className="w-3 h-3 bg-[#0D9488] border-2 border-white z-20" />
+        {renderAddNextBtn("-right-2")}
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // FIGURA 4: ESCUDO DE CONTROL DE FRAUDE (FRAUD_CHECKPOINT)
+  // ==========================================================================
+  if (nodeType === "FRAUD_CHECKPOINT") {
+    return (
+      <div className="relative w-[300px] h-[215px] flex items-center justify-center transition-all select-none">
+        {/* Silueta geométrica SVG Escudo */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 300 215">
+          <path
+            d="M 12 10 L 288 10 L 288 115 Q 288 195 150 205 Q 12 195 12 115 Z"
+            fill="#FFFBEB"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        <Handle type="target" position={Position.Left} style={{ left: 12, top: "50%" }} className="w-3 h-3 bg-[#D97706] border-2 border-white z-20" />
+
+        {/* Contenido en el interior del escudo */}
+        <div className="relative z-10 w-[215px] text-center space-y-1 px-1 pb-3">
+          <div className="flex items-center justify-center gap-1.5 border-b border-amber-300 pb-1 mb-0.5">
+            <span className="text-[10px] font-mono font-bold text-amber-900 uppercase">
+              ⛨ CONTROL DE FRAUDE (12-E)
+            </span>
+            <span className="text-[9px] font-mono bg-amber-600 text-white px-1.5 py-0.2 rounded font-bold shadow-xs">
+              PLD
+            </span>
+          </div>
+
+          <div className="font-bold text-gray-900 text-xs leading-snug line-clamp-2">
+            {label}
+          </div>
+
+          <div className="text-[10px] text-gray-600 truncate">
+            {responsibleRole || "Prevención de Fraudes"} {systemUsed ? `• ${systemUsed}` : ""}
+          </div>
+
+          {renderRiskBadge()}
+        </div>
+
+        <Handle type="source" position={Position.Right} style={{ right: 12, top: "50%" }} className="w-3 h-3 bg-[#D97706] border-2 border-white z-20" />
+        {renderAddNextBtn("-right-2")}
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // FIGURA 5: PARALELOGRAMO DE SISTEMA TI / API (EXTERNAL_SYSTEM)
+  // ==========================================================================
+  if (nodeType === "EXTERNAL_SYSTEM") {
+    return (
+      <div className="relative w-[310px] h-[200px] flex items-center justify-center transition-all select-none">
+        {/* Silueta geométrica SVG Paralelogramo */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 200">
+          <polygon
+            points="45,6 304,6 265,194 6,194"
+            fill="#FAF5FF"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="round"
+          />
+        </svg>
+
+        <Handle type="target" position={Position.Left} style={{ left: 16, top: "50%" }} className="w-3 h-3 bg-[#7C3AED] border-2 border-white z-20" />
+
+        {/* Contenido en el interior del paralelogramo */}
+        <div className="relative z-10 w-[215px] text-center space-y-1 px-1 font-mono">
+          <div className="flex items-center justify-center gap-1.5 border-b border-purple-200 pb-1 mb-0.5">
+            <span className="text-[10px] font-bold text-purple-900 uppercase">
+              ▱ SISTEMA TI / API
+            </span>
+            <span className="text-[9px] bg-purple-700 text-white px-1.5 py-0.2 rounded font-bold shadow-xs">
+              CORE
+            </span>
+          </div>
+
+          <div className="font-bold text-purple-950 text-xs leading-snug line-clamp-2 font-sans">
+            {label}
+          </div>
+
+          <div className="text-[10px] text-purple-700 font-bold truncate">
+            {systemUsed || "Core T24 / Banxico SPEI"}
+          </div>
+
+          {renderRiskBadge()}
+        </div>
+
+        <Handle type="source" position={Position.Right} style={{ right: 16, top: "50%" }} className="w-3 h-3 bg-[#7C3AED] border-2 border-white z-20" />
+        {renderAddNextBtn("-right-2")}
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // FIGURA 6: RECTÁNGULO DE PASO OPERATIVO / TAREA (TASK_STEP - DEFAULT)
+  // ==========================================================================
   return (
     <div
-      className={`relative min-w-[250px] max-w-[290px] shadow-sm transition-all text-xs ${shapeClasses} ${
-        selected ? "ring-2 ring-[#C0D725] shadow-lg" : ""
+      className={`relative min-w-[270px] max-w-[290px] rounded-none border-2 bg-white shadow-md transition-all text-xs ${
+        isSelected
+          ? "ring-2 ring-[#C0D725] shadow-lg border-[#C0D725]"
+          : isSodAlert
+          ? "border-rose-600 ring-2 ring-rose-500"
+          : "border-slate-700"
       }`}
     >
-      {/* Handle de Entrada Izquierdo */}
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-[#3299A8] border-2 border-white" />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-[#3299A8] border-2 border-white -ml-1 z-20" />
 
-      {/* Cabecera Geométrica */}
-      <div className={`px-2.5 py-1.5 rounded-t-sm font-bold flex items-center justify-between ${headerBg}`}>
-        <span className="tracking-wide uppercase text-[10px] font-mono flex items-center gap-1 truncate">
-          <span>{typeSymbol}</span>
-          <span>{typeLabel}</span>
+      {/* Cabecera Rectangular */}
+      <div className="px-3 py-1.5 bg-slate-800 text-white font-bold flex items-center justify-between text-[10px] font-mono uppercase tracking-wider">
+        <span className="flex items-center gap-1 truncate">
+          <span>▭</span>
+          <span>PASO OPERATIVO</span>
         </span>
         {creditStage && creditStage !== "NOT_APPLICABLE" && (
-          <span className="text-[9px] uppercase tracking-wider bg-black/20 px-1.5 py-0.2 rounded text-white shrink-0">
+          <span className="text-[9px] uppercase tracking-wider bg-white/20 px-1.5 py-0.2 rounded text-white shrink-0">
             {creditStage}
           </span>
         )}
       </div>
 
-      {/* Cuerpo del Nodo */}
-      <div className="p-2.5 space-y-1.5">
-        {/* Título o Pregunta Lógica */}
+      {/* Cuerpo del Rectángulo */}
+      <div className="p-3 space-y-1.5">
         <div className="font-bold text-gray-900 leading-snug">
-          {nodeType === "DECISION_GATEWAY" ? (
-            <span className="text-indigo-950 font-serif">{config.decisionQuestion || label}</span>
-          ) : (
-            <span>{label}</span>
-          )}
+          {label}
         </div>
 
-        {/* Criterios condicionales si es Rombo de Decisión */}
-        {nodeType === "DECISION_GATEWAY" && (
-          <div className="bg-indigo-50 border border-indigo-200/80 p-1.5 rounded text-[10px] space-y-1">
-            <div className="text-emerald-800 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-emerald-600 rounded-[1px] inline-block"></span>
-              <span>Rama Sí: {config.yesCriteria || "Aprobación Automática"}</span>
-            </div>
-            <div className="text-amber-800 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-amber-600 rounded-[1px] inline-block"></span>
-              <span>Rama No: {config.noCriteria || "Escalamiento a Comité"}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Metadatos operativos */}
         <div className="text-[11px] text-gray-500 space-y-0.5">
           {responsibleRole && (
             <div className="truncate">
@@ -163,41 +401,8 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
           )}
         </div>
 
-        {/* Badges de Riesgos y PMA */}
-        <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-1 items-center justify-between">
-          {riskCount > 0 ? (
-            <span
-              className={`text-[9px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 ${getZoneBadgeClasses(
-                maxResidualZone
-              )}`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
-                  maxResidualZone === "GREEN"
-                    ? "bg-emerald-600"
-                    : maxResidualZone === "YELLOW"
-                    ? "bg-amber-500"
-                    : maxResidualZone === "ORANGE"
-                    ? "bg-orange-600"
-                    : "bg-rose-600"
-                }`}
-              />
-              <span>{riskCount} {riskCount === 1 ? "Riesgo" : "Riesgos"} ({maxResidualZone})</span>
-            </span>
-          ) : (
-            <span className="text-[9px] font-mono text-gray-400 bg-gray-50 px-1 py-0.5 rounded-[3px] border border-gray-200">
-              0 riesgos anclados
-            </span>
-          )}
+        {renderRiskBadge()}
 
-          {totalPMA > 0 && (
-            <span className="text-[9px] font-bold font-mono text-orange-800">
-              PMA: {formatMXN(totalPMA)}
-            </span>
-          )}
-        </div>
-
-        {/* Alerta de Segregación de Funciones (SoD) */}
         {hasSodViolation && (
           <div
             className={`px-1.5 py-0.5 rounded-[3px] text-[10px] font-mono font-semibold uppercase border ${
@@ -209,29 +414,10 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
             Conflicto SoD (CUB Art. 65/88)
           </div>
         )}
-
-        {hasFraudCheckpoint && (
-          <div className="bg-amber-50 text-amber-900 px-1.5 py-0.5 rounded-[3px] text-[10px] font-mono font-semibold uppercase border border-amber-300">
-            Candado Fraude Anexo 12-E
-          </div>
-        )}
       </div>
 
-      {/* Handle de Salida Derecho */}
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-[#3299A8] border-2 border-white" />
-
-      {/* Botón "+" Estilo Miro / Canva para añadir y conectar siguiente figura */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onAddNext?.(id, nodeType, label);
-        }}
-        className="nodrag absolute -right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#1F242B] hover:bg-[#C0D725] text-white hover:text-[#1F242B] border-2 border-white shadow-md flex items-center justify-center text-xs font-black transition-all hover:scale-110 z-10 cursor-pointer"
-        title="Agregar siguiente figura conectada en el flujo"
-      >
-        +
-      </button>
+      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-[#3299A8] border-2 border-white -mr-1 z-20" />
+      {renderAddNextBtn("-right-3.5")}
     </div>
   );
 }

@@ -105,10 +105,15 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
       if (viewMode === "RESIDUAL") {
         return Math.round(r.residualProbability) === prob && Math.round(r.residualImpact) === imp;
       }
-      // Target (Post-Plan): assumes an additional 30% reduction
-      const targetProb = Math.max(1, Math.round(r.residualProbability * 0.7));
-      const targetImp = Math.max(1, Math.round(r.residualImpact * 0.7));
-      return targetProb === prob && targetImp === imp;
+      // Target (Post-Plan): Basado en los planes de acción reales asociados al riesgo
+      if (r.actionPlans && r.actionPlans.length > 0) {
+        const maxImprovement = Math.max(...r.actionPlans.map((p: any) => p.improvementPotentialPct || 0.5));
+        const reductionFactor = 1 - maxImprovement * 0.55;
+        const targetProb = Math.max(1, Math.round(r.residualProbability * reductionFactor));
+        const targetImp = Math.max(1, Math.round(r.residualImpact * reductionFactor));
+        return targetProb === prob && targetImp === imp;
+      }
+      return Math.round(r.residualProbability) === prob && Math.round(r.residualImpact) === imp;
     });
   };
 

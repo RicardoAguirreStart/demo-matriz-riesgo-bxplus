@@ -172,3 +172,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "Error al dar de alta el riesgo" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { riskId, action = "APPROVE_AND_PUBLISH", userRole = "UAIR_ADMIN" } = body;
+
+    const risk = await prisma.riskEvent.findUnique({
+      where: { id: riskId },
+      include: { taxonomy: true, businessUnit: true, process: true },
+    });
+
+    if (!risk) {
+      return NextResponse.json({ success: false, error: "Riesgo no encontrado" }, { status: 404 });
+    }
+
+    const user =
+      (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+      (await prisma.user.findFirst());
+
+    if (action === "APPROVE_AND_PUBLISH") {
+      const updatedRisk = await prisma.riskEvent.update({
+        where: { id: riskId },
+        data: { status: "PUBLISHED" },
+        include: { taxonomy: true, businessUnit: true, process: true },
+      });
+
+      if (user) {
+        await recordAuditLog({
+          userId: user.id,
+          userRole: userRole as RoleType,
+          actionType: "APPROVE_AND_PUBLISH_RISK",
+          entityName: "RiskEvent",
+          entityId: updatedRisk.id,
+          previousState: { status: risk.status },
+          newState: { status: updatedRisk.status, approvedBy: user.fullName },
+        });
+      }
+
+      return NextResponse.json({ success: true, risk: updatedRisk });
+    }
+
+    return NextResponse.json({ success: false, error: "Acción no reconocida" }, { status: 400 });
+  } catch (error) {
+    console.error("Error updating risk status:", error);
+    return NextResponse.json({ success: false, error: "Error al actualizar estado del riesgo" }, { status: 500 });
+  }
+}

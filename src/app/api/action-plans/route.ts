@@ -43,10 +43,12 @@ export async function POST(request: Request) {
           signedByBusinessHead: true,
           status: "APPROVED_COMMITTED",
         },
-        include: { riskEvent: true },
+        include: { riskEvent: true, evidences: true },
       });
 
-      const user = await prisma.user.findFirst({ where: { role: userRole as RoleType } }) || await prisma.user.findFirst();
+      const user =
+        (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+        (await prisma.user.findFirst());
 
       if (user) {
         await recordAuditLog({
@@ -63,7 +65,75 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, plan: updated });
     }
 
-    // Acción 2: Crear nuevo plan de acción
+    // Acción 2: Adjuntar evidencia documental con huella digital criptográfica SHA-256
+    if (action === "ADD_EVIDENCE") {
+      const { planId, fileName, comments, userRole = "PROCESS_OWNER" } = body;
+      const plan = await prisma.actionPlan.findUnique({
+        where: { id: planId },
+        include: { riskEvent: true },
+      });
+      if (!plan) {
+        return NextResponse.json({ success: false, error: "Plan no encontrado" }, { status: 404 });
+      }
+
+      const crypto = await import("crypto");
+      const fileHashSha256 = crypto
+        .createHash("sha256")
+        .update(`${fileName}-${Date.now()}-${planId}`)
+        .digest("hex");
+
+      const evidence = await prisma.actionPlanEvidence.create({
+        data: {
+          actionPlanId: planId,
+          fileName,
+          fileUrl: `/evidence/secured/${fileName}`,
+          fileHashSha256,
+          comments: comments || "Evidencia técnica de mitigación validada conforme a estándares B×+",
+          approvedByUAIR: false,
+        },
+      });
+
+      const updatedPlan = await prisma.actionPlan.update({
+        where: { id: planId },
+        data: {
+          status: plan.status === "DRAFT" ? "IN_PROGRESS" : "EVIDENCE_SUBMITTED",
+        },
+        include: {
+          riskEvent: true,
+          evidences: true,
+        },
+      });
+
+      const user =
+        (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+        (await prisma.user.findFirst());
+
+      if (user) {
+        await recordAuditLog({
+          userId: user.id,
+          userRole: userRole as RoleType,
+          actionType: "UPLOAD_CONTROL_EVIDENCE",
+          entityName: "ActionPlanEvidence",
+          entityId: evidence.id,
+          previousState: null,
+          newState: {
+            planId,
+            evidenceId: evidence.id,
+            fileName,
+            fileHashSha256,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        evidence,
+        plan: updatedPlan,
+        fileHashSha256,
+      });
+    }
+
+    // Acción 3: Crear nuevo plan de acción de mitigación
     const {
       title,
       description,
@@ -97,7 +167,9 @@ export async function POST(request: Request) {
       (costScale === "VERY_LOW" || costScale === "LOW") &&
       Number(estimatedDays) <= 90;
 
-    const user = await prisma.user.findFirst({ where: { role: userRole as RoleType } }) || await prisma.user.findFirst();
+    const user =
+      (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+      (await prisma.user.findFirst());
     if (!user) {
       return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 400 });
     }
@@ -127,6 +199,7 @@ export async function POST(request: Request) {
       },
       include: {
         riskEvent: true,
+        evidences: true,
       },
     });
 

@@ -5,7 +5,19 @@ import React, { useState, useEffect } from "react";
 import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
 import { RISK_TYPE_LABELS } from "@/lib/constants";
 import { BusinessLineBancoBx, RiskTypeCNBV, RoleType } from "@/types";
-import { Plus, Search, Filter, ShieldCheck, X, Sparkles, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Filter,
+  ShieldCheck,
+  X,
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  Lock,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface RiskAdminViewProps {
@@ -20,6 +32,8 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
   const [selectedZone, setSelectedZone] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [statusBanner, setStatusBanner] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -38,6 +52,7 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
   const [speiImpact, setSpeiImpact] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Fetch risks based on filters
   const fetchRisks = () => {
     setLoading(true);
     let url = `/api/risks?businessLine=${businessLine}`;
@@ -50,13 +65,8 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
       .then((data) => {
         if (data.success) {
           setRisks(data.risks);
-          // Extraer taxonomías únicas para el selector
-          const uniqueTax = Array.from(
-            new Map(data.risks.map((r: any) => [r.taxonomy.id, r.taxonomy])).values()
-          );
-          setTaxonomies(uniqueTax);
-          if (uniqueTax.length > 0 && !taxonomyId) {
-            setTaxonomyId((uniqueTax[0] as any).id);
+          if (data.risks.length > 0 && !taxonomyId) {
+            setTaxonomyId(data.risks[0].taxonomyId);
           }
         }
       })
@@ -67,10 +77,57 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
     fetchRisks();
   }, [businessLine, selectedZone, selectedType, search]);
 
+  // Extract unique taxonomies for the form
+  useEffect(() => {
+    fetch("/api/risks")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const uniqueTax = Array.from(
+            new Map(data.risks.map((r: any) => [r.taxonomy.id, r.taxonomy])).values()
+          );
+          setTaxonomies(uniqueTax);
+          if (uniqueTax.length > 0 && !taxonomyId) {
+            setTaxonomyId((uniqueTax[0] as any).id);
+          }
+        }
+      });
+  }, []);
+
+  // Governance: Approve risk by 2nd line
+  const handleApproveRisk = async (riskId: string) => {
+    setApprovingId(riskId);
+    try {
+      const res = await fetch("/api/risks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "APPROVE_AND_PUBLISH",
+          riskId,
+          userRole: currentRole,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatusBanner("Riesgo formalmente validado, aprobado y publicado en la Matriz Viva (2ª Línea UAIR).");
+        setTimeout(() => setStatusBanner(null), 3500);
+        fetchRisks();
+      }
+    } catch (err) {
+      console.error("Error approving risk:", err);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const handleSubmitRisk = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentRole === "INTERNAL_AUDITOR") return;
+
     try {
       setSubmitting(true);
+      const targetStatus = currentRole === "PROCESS_OWNER" ? "UNDER_REVIEW" : "PUBLISHED";
+
       const res = await fetch("/api/risks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,19 +150,24 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
           isEmergingRisk: isEmerging,
           speiImpact: speiImpact,
           userRole: currentRole,
-          status: "PUBLISHED",
+          status: targetStatus,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setIsModalOpen(false);
-        // Reset form
         setTitle("");
         setCause("");
         setEventDescription("");
         setConsequence("");
         fetchRisks();
-        alert("¡Riesgo registrado y publicado en la Matriz Viva!");
+
+        if (targetStatus === "UNDER_REVIEW") {
+          setStatusBanner("Riesgo registrado en 1ª Línea y enviado a revisión de la UAIR (2ª Línea).");
+        } else {
+          setStatusBanner("Riesgo registrado y publicado en la Matriz Viva.");
+        }
+        setTimeout(() => setStatusBanner(null), 3500);
       }
     } catch (e) {
       console.error("Error creating risk:", e);
@@ -114,8 +176,24 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
     }
   };
 
+  const isInternalAudit = currentRole === "INTERNAL_AUDITOR";
+  const canApprove = currentRole === "UAIR_ADMIN" || currentRole === "C_LEVEL_CAIR";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
+      {/* Status Notification Banner */}
+      {statusBanner && (
+        <div className="bg-[#1F242B] border-l-4 border-[#C0D725] text-white p-3 rounded-bx shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2 text-xs">
+            <CheckCircle2 className="w-4 h-4 text-[#C0D725]" />
+            <span>{statusBanner}</span>
+          </div>
+          <button onClick={() => setStatusBanner(null)} className="text-gray-400 hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header and Controls */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -130,13 +208,20 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4 text-[#C0D725]" />
-          <span>+ Dar de Alta Nuevo Riesgo</span>
-        </button>
+        {isInternalAudit ? (
+          <div className="bg-slate-100 border border-slate-300 text-slate-700 text-xs px-3.5 py-2 rounded-md flex items-center gap-2 font-medium">
+            <Lock className="w-4 h-4 text-slate-500" />
+            <span>Modo Auditoría 3ª Línea (Solo Lectura — CUB Art. 88)</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4 text-[#C0D725]" />
+            <span>+ Dar de Alta Nuevo Riesgo</span>
+          </button>
+        )}
       </div>
 
       {/* 11 CNBV Risk Types Overview Grid */}
@@ -159,14 +244,16 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
               <div className="flex items-center justify-between text-[11px] font-bold">
                 <span className="truncate">{info.name.split(" ")[0]}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                    isSelected ? "bg-[#C0D725] text-[#1F242B]" : "bg-gray-100 text-gray-600"
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isSelected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
                   }`}
                 >
                   {count}
                 </span>
               </div>
-              <div className="text-[9px] opacity-75 truncate mt-1">{info.badge}</div>
+              <div className={`text-[10px] truncate mt-1 ${isSelected ? "text-gray-300" : "text-gray-500"}`}>
+                {info.badge}
+              </div>
             </div>
           );
         })}
@@ -204,7 +291,7 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
         </div>
       </div>
 
-      {/* Risks Table */}
+      {/* Risks Table with Governance Actions */}
       <div className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -217,68 +304,96 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                 <th className="py-2.5 px-4 text-center">Residual</th>
                 <th className="py-2.5 px-4 text-right">PMA (VaR 99.9%)</th>
                 <th className="py-2.5 px-4 text-right">PEA (Esperada)</th>
-                <th className="py-2.5 px-4 text-center">Estado</th>
+                <th className="py-2.5 px-4 text-center">Gobernanza / Aprobación</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {risks.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="py-3 px-4 font-mono font-bold text-gray-600">
-                    <div>{r.code}</div>
-                    <div className="text-[10px] text-gray-400 font-normal">
-                      {new Date(r.createdAt).toLocaleDateString("es-MX")}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 max-w-md">
-                    <div className="font-bold text-gray-900 leading-snug">{r.title}</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-                      <strong className="text-gray-700">Causa:</strong> {r.cause}
-                    </div>
-                    <div className="text-[11px] text-gray-600 line-clamp-1">
-                      <strong className="text-gray-700">Consecuencia:</strong> {r.consequence}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-bold text-gray-800 text-[11px]">
-                      {r.taxonomy?.riskType}
-                    </span>
-                    <div className="text-[10px] text-gray-400">{r.businessUnit?.name}</div>
-                  </td>
-                  <td className="py-3 px-4 text-center font-mono">
-                    <span className="font-semibold text-gray-700">{r.inherentScore}</span>
-                    <span className="text-[10px] text-gray-400 block">
-                      ({r.inherentProbability}×{r.inherentImpact})
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(
-                        r.residualZone
-                      )}`}
-                    >
-                      {r.residualScore} ({r.residualZone})
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right font-bold font-mono text-orange-700">
-                    {formatMXN(r.maxAnnualLossPMA)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-medium font-mono text-gray-700">
-                    {formatMXN(r.expectedAnnualLossPEA)}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                      {r.status || "PUBLISHED"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {risks.map((r) => {
+                const isUnderReview = r.status === "UNDER_REVIEW";
+                return (
+                  <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-gray-600">
+                      <div>{r.code}</div>
+                      <div className="text-[10px] text-gray-400 font-normal">
+                        {new Date(r.createdAt).toLocaleDateString("es-MX")}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 max-w-md">
+                      <div className="font-bold text-gray-900 leading-snug">{r.title}</div>
+                      <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+                        <strong className="text-gray-700">Causa:</strong> {r.cause}
+                      </div>
+                      <div className="text-[11px] text-gray-600 line-clamp-1">
+                        <strong className="text-gray-700">Consecuencia:</strong> {r.consequence}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-gray-800 text-[11px]">
+                        {r.taxonomy?.riskType}
+                      </span>
+                      <div className="text-[10px] text-gray-400">{r.businessUnit?.name}</div>
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono">
+                      <span className="font-semibold text-gray-700">{r.inherentScore}</span>
+                      <span className="text-[10px] text-gray-400 block">
+                        ({r.inherentProbability}×{r.inherentImpact})
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(
+                          r.residualZone
+                        )}`}
+                      >
+                        {r.residualScore} ({r.residualZone})
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold font-mono text-orange-700">
+                      {formatMXN(r.maxAnnualLossPMA)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium font-mono text-gray-700">
+                      {formatMXN(r.expectedAnnualLossPEA)}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {isUnderReview ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            En Revisión UAIR (1ª Línea)
+                          </span>
+                          {canApprove && (
+                            <button
+                              onClick={() => handleApproveRisk(r.id)}
+                              disabled={approvingId === r.id}
+                              className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 transition-transform hover:scale-105 shadow-sm disabled:opacity-50"
+                              title="Aprobar y publicar este riesgo en la Matriz Viva (2ª Línea)"
+                            >
+                              {approvingId === r.id ? (
+                                <RefreshCw className="w-3 h-3 animate-spin text-[#C0D725]" />
+                              ) : (
+                                <ShieldCheck className="w-3 h-3 text-[#C0D725]" />
+                              )}
+                              <span>Aprobar y Publicar</span>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Publicado (Matriz Viva)
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* MODAL DE ALTA DE RIESGO (4 VÍAS DE ENTRADA) */}
-      {isModalOpen && (
+      {/* MODAL DE ALTA DE RIESGO */}
+      {isModalOpen && !isInternalAudit && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between pb-3 border-b border-gray-200">
@@ -287,8 +402,19 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                   Gobernanza CNBV — Matriz Viva
                 </span>
                 <h3 className="text-lg font-bold text-gray-900 font-serif">
-                  Alta Directa de Nuevo Evento de Riesgo
+                  Alta de Nuevo Evento de Riesgo
                 </h3>
+                <div className="mt-1 text-xs">
+                  {currentRole === "PROCESS_OWNER" ? (
+                    <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200">
+                      Flujo 1ª Línea: Se registrará en estado &quot;En Revisión UAIR&quot;
+                    </span>
+                  ) : (
+                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200">
+                      Flujo 2ª Línea: Se publicará directamente en la Matriz Viva
+                    </span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -453,7 +579,11 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                   disabled={submitting}
                   className="px-5 py-2 bg-[#1F242B] hover:bg-[#2A313C] text-white rounded font-bold transition-colors disabled:opacity-50"
                 >
-                  {submitting ? "Publicando..." : "Publicar en Matriz Viva"}
+                  {submitting
+                    ? "Registrando..."
+                    : currentRole === "PROCESS_OWNER"
+                    ? "Enviar a Revisión UAIR"
+                    : "Publicar en Matriz Viva"}
                 </button>
               </div>
             </form>

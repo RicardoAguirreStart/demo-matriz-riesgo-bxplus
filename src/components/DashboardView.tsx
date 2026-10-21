@@ -293,7 +293,10 @@ export function DashboardView({
             <div className="space-y-2 mt-3">
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="text-emerald-700">🟢 Verde (Dentro Apetito)</span>
+                  <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span>Verde (Dentro Apetito)</span>
+                  </span>
                   <span>{zoneCounts?.GREEN || 0}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
@@ -306,7 +309,10 @@ export function DashboardView({
 
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="text-amber-700">🟡 Amarillo (Preventivo)</span>
+                  <span className="flex items-center gap-1.5 text-amber-700 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                    <span>Amarillo (Preventivo)</span>
+                  </span>
                   <span>{zoneCounts?.YELLOW || 0}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
@@ -319,7 +325,10 @@ export function DashboardView({
 
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="text-orange-700">🟠 Naranja (Excede Tolerancia)</span>
+                  <span className="flex items-center gap-1.5 text-orange-700 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
+                    <span>Naranja (Excede Tolerancia)</span>
+                  </span>
                   <span>{zoneCounts?.ORANGE || 0}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
@@ -332,7 +341,10 @@ export function DashboardView({
 
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="text-rose-700">🔴 Rojo (Transgresión Límite)</span>
+                  <span className="flex items-center gap-1.5 text-rose-700 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                    <span>Rojo (Transgresión Límite)</span>
+                  </span>
                   <span>{zoneCounts?.RED || 0}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">

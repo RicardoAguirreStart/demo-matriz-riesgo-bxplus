@@ -6,6 +6,7 @@ import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
 import { RISK_TYPE_LABELS } from "@/lib/constants";
 import { BusinessLineBancoBx, RiskTypeCNBV, RoleType } from "@/types";
 import { Plus, Search, Filter, ShieldCheck, X, Sparkles, AlertCircle } from "lucide-react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface RiskAdminViewProps {
   businessLine: BusinessLineBancoBx;
@@ -185,18 +186,21 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-medium">Filtrar por Zona RAF:</span>
-          <select
-            value={selectedZone}
-            onChange={(e) => setSelectedZone(e.target.value)}
-            className="bg-[#F5F7F9] border border-gray-300 rounded px-2 py-1 outline-none font-medium"
-          >
-            <option value="ALL">Todas las Zonas</option>
-            <option value="GREEN">🟢 Verde (Dentro Apetito)</option>
-            <option value="YELLOW">🟡 Amarillo (Preventivo)</option>
-            <option value="ORANGE">🟠 Naranja (Excede Tolerancia)</option>
-            <option value="RED">🔴 Rojo (Transgresión)</option>
-          </select>
+          <span className="text-gray-500 font-medium whitespace-nowrap">Filtrar por Zona RAF:</span>
+          <div className="w-60">
+            <CustomSelect
+              options={[
+                { value: "ALL", label: "Todas las Zonas" },
+                { value: "GREEN", label: "Verde (Dentro Apetito)", dotColor: "#10B981" },
+                { value: "YELLOW", label: "Amarillo (Preventivo)", dotColor: "#F59E0B" },
+                { value: "ORANGE", label: "Naranja (Excede Tolerancia)", dotColor: "#F97316" },
+                { value: "RED", label: "Rojo (Transgresión)", dotColor: "#EF4444" },
+              ]}
+              value={selectedZone}
+              onChange={setSelectedZone}
+              theme="light"
+            />
+          </div>
         </div>
       </div>
 
@@ -348,17 +352,15 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Taxonomía CNBV:</label>
-                  <select
+                  <CustomSelect
+                    options={taxonomies.map((t) => ({
+                      value: t.id,
+                      label: `${t.riskType} (${t.code})`,
+                    }))}
                     value={taxonomyId}
-                    onChange={(e) => setTaxonomyId(e.target.value)}
-                    className="w-full p-2 border rounded bg-white"
-                  >
-                    {taxonomies.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.riskType} ({t.code})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setTaxonomyId}
+                    theme="light"
+                  />
                 </div>
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Probabilidad Inherente (1-5):</label>

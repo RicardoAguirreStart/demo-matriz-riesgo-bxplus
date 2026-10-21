@@ -1,7 +1,7 @@
 // src/components/FlowchartView.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ReactFlow,
   Controls,
@@ -9,13 +9,13 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  addEdge,
   Handle,
   Position,
   NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   Shield,
   AlertTriangle,
@@ -24,13 +24,10 @@ import {
   X,
   Server,
   UserCheck,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  ChevronRight,
+  Zap,
 } from "lucide-react";
 
-// CUSTOM NODE COMPONENT
+// CUSTOM NODE COMPONENT (Pure typography, zero emojis or icons inside the node)
 function BankingProcessNode({ data, selected }: NodeProps) {
   const {
     label,
@@ -40,7 +37,6 @@ function BankingProcessNode({ data, selected }: NodeProps) {
     systemUsed,
     riskCount = 0,
     maxResidualZone = "GREEN",
-    totalPEA = 0,
     totalPMA = 0,
     hasSodViolation = false,
     hasFraudCheckpoint = false,
@@ -48,29 +44,25 @@ function BankingProcessNode({ data, selected }: NodeProps) {
 
   let borderColor = "border-gray-300";
   let headerBg = "bg-gray-100 text-gray-800";
-  let icon = "📋";
 
   if (nodeType === "START_END") {
     borderColor = "border-emerald-500";
     headerBg = "bg-emerald-600 text-white";
-    icon = "🏁";
   } else if (nodeType === "CONTROL_POINT") {
     borderColor = "border-[#3299A8]";
     headerBg = "bg-[#3299A8] text-white";
-    icon = "🛡️";
   } else if (nodeType === "FRAUD_CHECKPOINT") {
     borderColor = "border-amber-500";
     headerBg = "bg-amber-600 text-white";
-    icon = "🕵️";
   } else if (nodeType === "DECISION_GATEWAY") {
     borderColor = "border-indigo-500";
     headerBg = "bg-indigo-600 text-white";
-    icon = "⚖️";
   } else if (nodeType === "EXTERNAL_SYSTEM") {
     borderColor = "border-purple-500";
     headerBg = "bg-purple-600 text-white";
-    icon = "⚡";
   }
+
+  const cleanNodeTypeLabel = (nodeType || "").replace(/_/g, " ");
 
   return (
     <div
@@ -80,13 +72,12 @@ function BankingProcessNode({ data, selected }: NodeProps) {
     >
       <Handle type="target" position={Position.Left} className="w-3 h-3 bg-[#3299A8]" />
 
-      {/* Node Header */}
+      {/* Node Header - Clean Typography without icons/emojis */}
       <div className={`px-2.5 py-1.5 rounded-t-md font-bold flex items-center justify-between ${headerBg}`}>
-        <div className="flex items-center gap-1.5 truncate">
-          <span>{icon}</span>
-          <span className="truncate">{nodeType}</span>
-        </div>
-        {creditStage !== "NOT_APPLICABLE" && (
+        <span className="tracking-wide uppercase text-[10px] font-mono truncate">
+          {cleanNodeTypeLabel}
+        </span>
+        {creditStage && creditStage !== "NOT_APPLICABLE" && (
           <span className="text-[9px] uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded text-white">
             {creditStage}
           </span>
@@ -101,15 +92,15 @@ function BankingProcessNode({ data, selected }: NodeProps) {
 
         <div className="text-[11px] text-gray-500 space-y-0.5">
           {responsibleRole && (
-            <div className="flex items-center gap-1">
-              <UserCheck className="w-3 h-3 text-gray-400 shrink-0" />
-              <span className="truncate">{responsibleRole}</span>
+            <div className="truncate">
+              <span className="text-gray-400 font-medium">Responsable: </span>
+              <span className="text-gray-700">{responsibleRole}</span>
             </div>
           )}
           {systemUsed && (
-            <div className="flex items-center gap-1">
-              <Server className="w-3 h-3 text-gray-400 shrink-0" />
-              <span className="truncate font-mono">{systemUsed}</span>
+            <div className="truncate font-mono text-[10px]">
+              <span className="text-gray-400">Sistema: </span>
+              <span className="text-gray-600">{systemUsed}</span>
             </div>
           )}
         </div>
@@ -139,15 +130,14 @@ function BankingProcessNode({ data, selected }: NodeProps) {
 
         {/* CUB Segregation of Duties Warning */}
         {hasSodViolation && (
-          <div className="bg-red-50 text-red-700 p-1 rounded text-[10px] font-semibold flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
-            <span>Violación Segregación (CUB)</span>
+          <div className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-red-200">
+            Violación Segregación (CUB)
           </div>
         )}
 
         {hasFraudCheckpoint && (
-          <div className="bg-amber-50 text-amber-800 p-1 rounded text-[10px] font-semibold flex items-center gap-1">
-            <span>🛡️ Control Fraude Anexo 12-E</span>
+          <div className="bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-amber-200">
+            Control Fraude Anexo 12-E
           </div>
         )}
       </div>
@@ -204,7 +194,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
         if (data.success && data.process) {
           setActiveProcess(data.process);
 
-          // Mapear nodos de base de datos a React Flow
           const mappedNodes = data.process.flowNodes.map((fn: any) => {
             const riskCount = fn.riskEvents.length;
             const maxResidualZone =
@@ -242,7 +231,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
             };
           });
 
-          // Mapear edges
           const mappedEdges = data.process.flowEdges.map((fe: any) => ({
             id: fe.id,
             source: fe.sourceNodeId,
@@ -267,7 +255,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
     }
   }, [selectedProcessId, loadProcessDetail]);
 
-  // Handle node click
   const onNodeClick = (_: any, node: any) => {
     setSelectedNode(node.data.rawNode);
     setIsDrawerOpen(true);
@@ -275,7 +262,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
     setShowAddRiskForm(false);
   };
 
-  // Auditar nodo con Gemini
   const handleAuditNode = async () => {
     if (!selectedNode) return;
     try {
@@ -296,7 +282,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
     }
   };
 
-  // Insertar sugerencia de la IA
   const handleInsertSuggestion = async (type: "RISK" | "ACTION_PLAN", item: any) => {
     try {
       const res = await fetch("/api/copilot/insert-suggestion", {
@@ -318,7 +303,6 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
     }
   };
 
-  // Guardar nuevo riesgo anclado in-situ
   const handleCreateRiskOnNode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNode || !activeProcess) return;
@@ -352,16 +336,21 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
     }
   };
 
+  const processOptions = processes.map((p) => ({
+    value: p.id,
+    label: `${p.code}: ${p.name}`,
+  }));
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Process Selection Header */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-wrap items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded bg-cyan-50 text-[#3299A8]">
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider">
+            <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
               Cadena de Valor & Diagramador Interactivo (Miro / Canva)
             </div>
             <h2 className="text-base font-bold text-gray-900 font-serif">
@@ -370,25 +359,22 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
           </div>
         </div>
 
-        {/* Process Selector Dropdown */}
+        {/* Custom Process Selector (Replaces native select) */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-gray-600">Proceso Activo:</label>
-          <select
+          <span className="text-xs font-semibold text-gray-600">Proceso Activo:</span>
+          <CustomSelect
             value={selectedProcessId}
-            onChange={(e) => setSelectedProcessId(e.target.value)}
-            className="text-xs bg-[#F5F7F9] border border-gray-300 rounded px-2.5 py-1.5 font-medium outline-none text-gray-800"
-          >
-            {processes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.code}: {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedProcessId(val)}
+            options={processOptions}
+            theme="light"
+            className="min-w-[280px]"
+            dropdownClassName="w-[360px]"
+          />
         </div>
       </div>
 
-      {/* Main Interactive Canvas Area */}
-      <div className="relative w-full h-[650px] bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
+      {/* Main Interactive Canvas Area - Full Width & Height */}
+      <div className="relative w-full h-[720px] bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -397,7 +383,7 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
-          className="bg-dot-grid"
+          className="bg-dot-grid w-full h-full"
         >
           <Background color="#CBD5E1" gap={20} size={1} />
           <Controls position="bottom-right" />
@@ -412,32 +398,34 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
                 ? "#F59E0B"
                 : "#10B981"
             }
-            className="bg-white/80 border border-gray-200 rounded shadow"
+            className="bg-white/90 border border-gray-200 rounded shadow"
           />
         </ReactFlow>
 
-        {/* Canvas Floating Legend */}
-        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-md shadow border border-gray-200 text-[11px] space-y-1">
-          <div className="font-bold text-gray-800 mb-1">Convención de Nodos:</div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span>Inicio / Fin</span>
+        {/* Canvas Floating Legend - Clean Typography without icons or emojis */}
+        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-md shadow border border-gray-200 text-[11px] space-y-1.5 pointer-events-none select-none">
+          <div className="font-bold text-gray-800 border-b border-gray-100 pb-1">
+            Tipología de Nodos:
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#3299A8]"></span>
-            <span>Punto de Control</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>
+            <span className="font-medium text-gray-700">Inicio / Fin</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-            <span>Check Fraude (Anexo 12-E)</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#3299A8]"></span>
+            <span className="font-medium text-gray-700">Punto de Control</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-            <span>Compuerta de Decisión</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500"></span>
+            <span className="font-medium text-gray-700">Control de Fraude (Anexo 12-E)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-            <span>Sistema Core / SPEI</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500"></span>
+            <span className="font-medium text-gray-700">Compuerta de Decisión</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-sm bg-purple-500"></span>
+            <span className="font-medium text-gray-700">Sistema Core / SPEI</span>
           </div>
         </div>
       </div>
@@ -517,24 +505,25 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
                 </div>
 
                 {/* Emerging Risks Suggested */}
-                {auditResult.emergingRiskAlerts?.map((alert: any, i: number) => (
+                {auditResult.emergingRiskAlerts?.map((alertItem: any, i: number) => (
                   <div key={i} className="bg-white p-2.5 rounded border border-rose-200 text-xs space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-rose-700 text-[11px]">
-                        ⚠️ {alert.riskType} ({alert.cnbvAnnex})
+                      <span className="font-bold text-rose-700 text-[11px] flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{alertItem.riskType} ({alertItem.cnbvAnnex})</span>
                       </span>
                       <button
-                        onClick={() => handleInsertSuggestion("RISK", alert)}
+                        onClick={() => handleInsertSuggestion("RISK", alertItem)}
                         className="text-[10px] font-bold bg-[#1F242B] text-white px-2 py-0.5 rounded hover:bg-gray-800"
                       >
                         + Anclar a Matriz
                       </button>
                     </div>
                     <div className="text-[11px] text-gray-700">
-                      <strong>Evento:</strong> {alert.event}
+                      <strong>Evento:</strong> {alertItem.event}
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      <strong>Causa:</strong> {alert.cause}
+                      <strong>Causa:</strong> {alertItem.cause}
                     </div>
                   </div>
                 ))}
@@ -543,8 +532,9 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
                 {auditResult.prioritizedActionPlans?.map((plan: any, i: number) => (
                   <div key={i} className="bg-white p-2.5 rounded border border-[#C0D725] text-xs space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-900 text-[11px]">
-                        ⚡ {plan.title}
+                      <span className="font-bold text-gray-900 text-[11px] flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-[#3299A8]" />
+                        <span>{plan.title}</span>
                       </span>
                       <button
                         onClick={() => handleInsertSuggestion("ACTION_PLAN", plan)}

@@ -82,9 +82,13 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
           <h2 className="text-lg font-bold text-gray-900 font-serif">
             Matriz de Riesgo 5×5 (Probabilidad vs. Impacto)
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Semaforización regulatoria CUB: 🟢 Verde (1-4) | 🟡 Amarillo (5-9) | 🟠 Naranja (10-15) | 🔴 Rojo (16-25)
-          </p>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
+            <span className="font-medium text-gray-600">Semaforización CUB:</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" /> Verde (1-4)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm" /> Amarillo (5-9)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block shadow-sm" /> Naranja (10-15)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" /> Rojo (16-25)</span>
+          </div>
         </div>
 
         {/* 3-Way Mode Toggle */}

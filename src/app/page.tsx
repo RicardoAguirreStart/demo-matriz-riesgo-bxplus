@@ -22,8 +22,8 @@ export default function Home() {
   const [isCopilotModalOpen, setIsCopilotModalOpen] = useState<boolean>(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F7F9]">
-      {/* Institutional Header */}
+    <div className="min-h-screen flex flex-col bg-[#F5F7F9] w-full">
+      {/* Institutional Header - Full Width */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -34,8 +34,8 @@ export default function Home() {
         onOpenCopilot={() => setIsCopilotModalOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content Area - Full Width with proper padding and margins */}
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === "dashboard" && (
           <DashboardView
             businessLine={selectedBusinessLine}
@@ -90,9 +90,9 @@ export default function Home() {
         currentRole={currentRole}
       />
 
-      {/* Footer */}
-      <footer className="bg-[#1F242B] text-gray-400 text-xs py-4 px-6 border-t border-gray-800 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+      {/* Footer - Full Width */}
+      <footer className="bg-[#1F242B] text-gray-400 text-xs py-4 px-4 sm:px-6 lg:px-8 border-t border-gray-800 mt-auto w-full">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div>
             <span className="font-semibold text-gray-200">Banco Ve por Más, S.A., Institución de Banca Múltiple</span>
             <span className="mx-2">•</span>

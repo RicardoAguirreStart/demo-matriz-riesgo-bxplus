@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { formatMXN, formatPct, getZoneBadgeClasses } from "@/lib/utils";
 import { RoleType } from "@/types";
-import { Sparkles, Sliders, Send, AlertTriangle, ShieldCheck, Activity, BrainCircuit } from "lucide-react";
+import { Sparkles, Sliders, Send, AlertTriangle, ShieldCheck, Activity, BrainCircuit, CheckCircle2 } from "lucide-react";
 
 interface CopilotViewProps {
   currentRole: RoleType;
@@ -322,10 +322,18 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     <div className="text-2xl font-bold font-serif mt-1 text-gray-800">
                       10.50%
                     </div>
-                    <span className="text-[10px] text-gray-500">
-                      {simResult.metrics.stressedICAP >= 10.5
-                        ? "✓ Cumple Suplemento Conservación"
-                        : "⚠️ ALERTA: Rompe Límite Mínimo"}
+                    <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                      {simResult.metrics.stressedICAP >= 10.5 ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 inline shrink-0" />
+                          <span className="text-emerald-700 font-semibold">Cumple Suplemento Conservación</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 inline shrink-0" />
+                          <span className="text-rose-600 font-semibold">Alerta: Rompe Límite Mínimo</span>
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>

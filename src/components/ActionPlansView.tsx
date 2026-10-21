@@ -226,8 +226,9 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                   </td>
                   <td className="py-3 px-4 text-center">
                     {p.signedByBusinessHead ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        ✓ Firmado
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Firmado
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">

@@ -61,7 +61,6 @@ html, body {
 .react-flow__node:hover,
 .react-flow__node-bankingNode:hover {
   box-shadow: none !important;
-  transform: none !important;
 }
 .react-flow__node.selectable:focus,
 .react-flow__node.selectable:focus-visible {

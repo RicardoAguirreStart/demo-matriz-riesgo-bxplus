@@ -43,9 +43,6 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
       {/* Header and Sub-tabs */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
-            Reporteo Oficial CNBV / Banxico & Bitácora Inalterable
-          </div>
           <h2 className="text-lg font-bold text-gray-900 font-serif">
             Módulo Regulatorio de Supervisión e Integridad Criptográfica
           </h2>

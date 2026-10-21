@@ -221,9 +221,6 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
       {/* Header */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
-            Módulo 02 — Gestión de Planes de Acción & Evidencias
-          </div>
           <h2 className="text-lg font-bold text-gray-900 font-serif">
             Matriz de Priorización de Mitigación y Cuadrante &quot;Quick-Wins&quot;
           </h2>

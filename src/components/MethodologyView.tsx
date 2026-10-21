@@ -342,10 +342,6 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
       {/* View Header */}
       <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Módulo 09 — Manual Metodológico & Marco Regulatorio</span>
-          </div>
           <h2 className="text-xl font-bold text-gray-900 font-serif leading-tight">
             Marco Teórico, Catálogo de Riesgos y Metodología Institucional
           </h2>

@@ -277,9 +277,6 @@ CR-PYME-105,PYME,6000000,5000000,0.05,0.15,0,0.020,0.40,20`,
       {/* Header */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
-            Módulo 01 — Ingesta & Motores Cuantitativos
-          </div>
           <h2 className="text-lg font-bold text-gray-900 font-serif">
             Importador Inteligente de Layouts Excel / CSV
           </h2>

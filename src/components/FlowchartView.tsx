@@ -603,18 +603,10 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
 
       {/* Process Selection and Action Toolbar */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-wrap items-center justify-between gap-4 w-full">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded bg-cyan-50 text-[#3299A8]">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
-              Cadena de Valor & Diagramador de Procesos
-            </div>
-            <h2 className="text-base font-bold text-gray-900 font-serif">
-              {activeProcess?.name || "Selecciona un Proceso Bancario"}
-            </h2>
-          </div>
+        <div>
+          <h2 className="text-base font-bold text-gray-900 font-serif">
+            {activeProcess?.name || "Selecciona un Proceso Bancario"}
+          </h2>
         </div>
 
         {/* Process Selector and Interactive Buttons */}

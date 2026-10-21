@@ -283,6 +283,10 @@ function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
   const [isDeleteProcessModalOpen, setIsDeleteProcessModalOpen] = useState(false);
   const [isDeletingProcess, setIsDeletingProcess] = useState(false);
 
+  // Modal 5: Confirmar Eliminación de Nodo (Reemplazo de confirm default)
+  const [isDeleteNodeModalOpen, setIsDeleteNodeModalOpen] = useState(false);
+  const [isDeletingNode, setIsDeletingNode] = useState(false);
+
   // Auto-resize y auto-scroll para la conversación del Asistente IA
   const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -666,9 +670,15 @@ function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
     }
   };
 
-  // Eliminar nodo
-  const handleDeleteNode = async () => {
-    if (!selectedNode || !confirm(`¿Deseas eliminar la figura "${selectedNode.label}" del diagrama?`)) return;
+  // Eliminar nodo (Modal Institucional B×+ sin window.confirm default)
+  const handleDeleteNode = () => {
+    if (!selectedNode) return;
+    setIsDeleteNodeModalOpen(true);
+  };
+
+  const executeDeleteNode = async () => {
+    if (!selectedNode) return;
+    setIsDeletingNode(true);
     try {
       const res = await fetch("/api/processes", {
         method: "POST",
@@ -680,14 +690,22 @@ function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
       });
       const data = await res.json();
       if (data.success) {
+        setIsDeleteNodeModalOpen(false);
         setIsDrawerOpen(false);
         setSelectedNode(null);
         setStatusBanner("Figura eliminada del proceso.");
         setTimeout(() => setStatusBanner(null), 3000);
         loadProcessDetail(selectedProcessId, sodAuditActive);
+      } else {
+        setStatusBanner("Error: " + (data.error || "No se pudo eliminar la figura"));
+        setTimeout(() => setStatusBanner(null), 4000);
       }
     } catch (err) {
       console.error("Error deleting node:", err);
+      setStatusBanner("Error de conexión al eliminar la figura.");
+      setTimeout(() => setStatusBanner(null), 4000);
+    } finally {
+      setIsDeletingNode(false);
     }
   };
 
@@ -881,11 +899,13 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         setTimeout(() => setStatusBanner(null), 4000);
         await refreshProcessList(data.processId);
       } else {
-        alert(data.error || "Ocurrió un error al generar el proceso");
+        setStatusBanner("Error: " + (data.error || "Ocurrió un error al generar el proceso"));
+        setTimeout(() => setStatusBanner(null), 4500);
       }
     } catch (err: any) {
       console.error("Error building process with AI:", err);
-      alert("Error de conexión al generar proceso: " + (err?.message || "Intente nuevamente"));
+      setStatusBanner("Error de conexión al generar proceso: " + (err?.message || "Intente nuevamente"));
+      setTimeout(() => setStatusBanner(null), 4500);
     } finally {
       setIsGeneratingProcess(false);
     }
@@ -995,11 +1015,13 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         setIsDrawerOpen(false);
         await refreshProcessList();
       } else {
-        alert(data.error || "Error al eliminar el proceso");
+        setStatusBanner("Error: " + (data.error || "Error al eliminar el proceso"));
+        setTimeout(() => setStatusBanner(null), 4500);
       }
     } catch (err: any) {
       console.error("Error deleting process:", err);
-      alert("Error de red al intentar eliminar el proceso.");
+      setStatusBanner("Error de red al intentar eliminar el proceso.");
+      setTimeout(() => setStatusBanner(null), 4500);
     } finally {
       setIsDeletingProcess(false);
     }
@@ -1155,6 +1177,25 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
     { value: "APPROVAL", label: "Etapa 3: Aprobación" },
     { value: "INSTRUMENTATION", label: "Etapa 4: Instrumentación" },
     { value: "CONTROL_RECOVERY", label: "Etapa 5: Control y Cobranza" },
+  ];
+
+  const formalizationOptions = [
+    { value: "F", label: "Formalizado en Manual de Operación (F) — 100% Cobertura" },
+    { value: "NF", label: "No Formalizado (NF) — Tope Cobertura ≤ 2 (Máx. 15% Mitigación)" },
+  ];
+
+  const periodicityOptions = [
+    { value: "d+0", label: "Tiempo Real / En Línea (d+0) — Factor 5/5" },
+    { value: "d+1", label: "Diario al Cierre (d+1) — Factor 4/5" },
+    { value: "d+7", label: "Semanal (d+7) — Factor 3/5" },
+    { value: "d+30", label: "Mensual (d+30) — Factor 2/5" },
+  ];
+
+  const interfaceTypeOptions = [
+    { value: "REST_SYNC", label: "API Síncrona REST / WebService" },
+    { value: "MQ_ASYNC", label: "Cola de Mensajería Asíncrona (MQ)" },
+    { value: "SPEI_DIRECT", label: "Conexión Directa Banxico SPEI" },
+    { value: "BATCH_NIGHTLY", label: "Proceso Batch Nocturno" },
   ];
 
   return (
@@ -1946,27 +1987,23 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                   </span>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-0.5">Estado de Formalización CNBV:</label>
-                    <select
+                    <CustomSelect
+                      options={formalizationOptions}
                       value={editStyleConfig.isFormalized ? "F" : "NF"}
-                      onChange={(e) => setEditStyleConfig({ ...editStyleConfig, isFormalized: e.target.value === "F" })}
-                      className="w-full p-1.5 border rounded bg-white text-xs font-medium"
-                    >
-                      <option value="F">Formalizado en Manual de Operación (F) — 100% Cobertura</option>
-                      <option value="NF">No Formalizado (NF) — Tope Cobertura &le; 2 (Máx. 15% Mitigación)</option>
-                    </select>
+                      onChange={(val) => setEditStyleConfig({ ...editStyleConfig, isFormalized: val === "F" })}
+                      theme="light"
+                      className="w-full"
+                    />
                   </div>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-0.5">Periodicidad de Ejecución:</label>
-                    <select
+                    <CustomSelect
+                      options={periodicityOptions}
                       value={editStyleConfig.periodicity || "d+0"}
-                      onChange={(e) => setEditStyleConfig({ ...editStyleConfig, periodicity: e.target.value })}
-                      className="w-full p-1.5 border rounded bg-white text-xs font-medium"
-                    >
-                      <option value="d+0">Tiempo Real / En Línea (d+0) — Factor 5/5</option>
-                      <option value="d+1">Diario al Cierre (d+1) — Factor 4/5</option>
-                      <option value="d+7">Semanal (d+7) — Factor 3/5</option>
-                      <option value="d+30">Mensual (d+30) — Factor 2/5</option>
-                    </select>
+                      onChange={(val) => setEditStyleConfig({ ...editStyleConfig, periodicity: val })}
+                      theme="light"
+                      className="w-full"
+                    />
                   </div>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-0.5">Evidencia Documental Generada:</label>
@@ -1997,16 +2034,13 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                   </div>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-0.5">Tipo de Interfaz:</label>
-                    <select
+                    <CustomSelect
+                      options={interfaceTypeOptions}
                       value={editStyleConfig.interfaceType || "REST_SYNC"}
-                      onChange={(e) => setEditStyleConfig({ ...editStyleConfig, interfaceType: e.target.value })}
-                      className="w-full p-1.5 border rounded bg-white text-xs font-medium"
-                    >
-                      <option value="REST_SYNC">API Síncrona REST / WebService</option>
-                      <option value="MQ_ASYNC">Cola de Mensajería Asíncrona (MQ)</option>
-                      <option value="SPEI_DIRECT">Conexión Directa Banxico SPEI</option>
-                      <option value="BATCH_NIGHTLY">Proceso Batch Nocturno</option>
-                    </select>
+                      onChange={(val) => setEditStyleConfig({ ...editStyleConfig, interfaceType: val })}
+                      theme="light"
+                      className="w-full"
+                    />
                   </div>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-0.5">RTO Objetivo de Recuperación (Horas):</label>
@@ -2207,7 +2241,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
       {/* MODAL CLÁSICO: NUEVO NODO BANCARIO MANUAL */}
       {isNewNodeModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 border border-gray-200">
+          <div className="bg-white rounded-lg shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 border border-gray-200">
             <div className="flex items-center justify-between pb-3 border-b border-gray-200">
               <h3 className="font-bold text-gray-900 font-serif text-base">
                 Agregar Nuevo Nodo al Proceso Bancario
@@ -2234,37 +2268,40 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="min-w-0">
                   <label className="font-bold text-gray-700 block mb-1">Tipo de Figura:</label>
                   <CustomSelect
                     options={nodeTypeOptions}
                     value={newNodeType}
                     onChange={setNewNodeType}
                     theme="light"
+                    className="w-full"
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="font-bold text-gray-700 block mb-1">Rol Responsable:</label>
                   <CustomSelect
                     options={roleOptions}
                     value={newNodeRole}
                     onChange={setNewNodeRole}
                     theme="light"
+                    className="w-full"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="min-w-0">
                   <label className="font-bold text-gray-700 block mb-1">Etapa de Crédito CUB:</label>
                   <CustomSelect
                     options={creditStageOptions}
                     value={newNodeCreditStage}
                     onChange={setNewNodeCreditStage}
                     theme="light"
+                    className="w-full"
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="font-bold text-gray-700 block mb-1">Sistema TI Utilizado:</label>
                   <input
                     type="text"
@@ -2393,6 +2430,79 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>{isDeletingProcess ? "Eliminando proceso..." : "Sí, Eliminar Proceso"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Confirmación para Eliminar Figura del Diagrama */}
+      {isDeleteNodeModalOpen && selectedNode && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-bx shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header del modal */}
+            <div className="bg-rose-50 border-b border-rose-100 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Eliminar Figura del Diagrama</h3>
+                  <p className="text-xs text-rose-700">Esta acción removerá el paso operativo del flujo</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteNodeModalOpen(false)}
+                disabled={isDeletingNode}
+                className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-5 space-y-3.5">
+              <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>Paso Operativo:</span>
+                  <span className="font-bold text-gray-900 text-right max-w-[220px] truncate">{selectedNode.label}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>Tipo de Figura:</span>
+                  <span className="font-mono text-gray-800">{selectedNode.nodeType}</span>
+                </div>
+                {selectedNode.responsibleRole && (
+                  <div className="flex items-center justify-between text-gray-500">
+                    <span>Rol Responsable:</span>
+                    <span className="text-gray-800 text-right max-w-[220px] truncate">{selectedNode.responsibleRole}</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-600">
+                ¿Estás seguro de que deseas eliminar este nodo? Se desconectarán las aristas y flujos que enlazan con esta figura.
+              </p>
+
+              {/* Botones de acción */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteNodeModalOpen(false)}
+                  disabled={isDeletingNode}
+                  className="px-3.5 py-1.5 text-xs text-gray-700 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={executeDeleteNode}
+                  disabled={isDeletingNode}
+                  className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingNode ? "Eliminando..." : "Sí, Eliminar Figura"}</span>
                 </button>
               </div>
             </div>

@@ -52,18 +52,18 @@ export function CustomSelect({
   const isDark = theme === "dark";
 
   return (
-    <div ref={containerRef} className={`relative inline-block text-xs ${className}`}>
+    <div ref={containerRef} className={`relative text-xs min-w-0 ${className ? className : "w-full"}`}>
       {/* Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md border font-medium transition-all ${
+        className={`w-full min-w-0 flex items-center justify-between gap-2 px-3 py-1.5 rounded-md border font-medium transition-all ${
           isDark
             ? "bg-[#292F38] text-gray-200 border-gray-700 hover:border-gray-500 focus:ring-1 focus:ring-[#C0D725]"
             : "bg-white text-gray-800 border-gray-300 hover:border-gray-400 focus:ring-1 focus:ring-[#3299A8] shadow-sm"
         }`}
       >
-        <div className="flex items-center gap-1.5 truncate">
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
           {icon && <span className="shrink-0">{icon}</span>}
           {selectedOption?.dotColor && (
             <span
@@ -83,7 +83,7 @@ export function CustomSelect({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute left-0 mt-1 min-w-[220px] max-h-64 overflow-y-auto rounded-md shadow-2xl z-50 border p-1 text-xs animate-in fade-in-50 zoom-in-95 duration-150 ${
+          className={`absolute left-0 mt-1 w-full min-w-[200px] max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto rounded-md shadow-2xl z-50 border p-1 text-xs animate-in fade-in-50 zoom-in-95 duration-150 ${
             isDark
               ? "bg-[#1F242B] border-gray-700 text-gray-200"
               : "bg-white border-gray-200 text-gray-800"
@@ -108,14 +108,14 @@ export function CustomSelect({
                     : "hover:bg-gray-100 text-gray-700"
                 }`}
               >
-                <div className="flex items-center gap-2 truncate pr-2">
+                <div className="flex items-center gap-2 truncate pr-2 min-w-0">
                   {opt.dotColor && (
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm"
                       style={{ backgroundColor: opt.dotColor }}
                     />
                   )}
-                  <div className="truncate">
+                  <div className="truncate min-w-0">
                     <div className="truncate">{opt.label}</div>
                     {opt.description && (
                       <div className="text-[10px] opacity-60 truncate">{opt.description}</div>

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
 import { RoleType } from "@/types";
-import { FileText, Shield, Scale, Hash, CheckCircle2, Download, AlertCircle } from "lucide-react";
+import { FileText, Shield, Scale, Hash, CheckCircle2, Download, AlertCircle, X } from "lucide-react";
 
 interface RegulatoryReportsViewProps {
   currentRole: RoleType;
@@ -14,6 +14,7 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeReportTab, setActiveReportTab] = useState<"R24" | "LEGAL" | "ART88" | "AUDIT">("R24");
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -40,6 +41,19 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
 
   return (
     <div className="space-y-6">
+      {/* Export Notice Banner */}
+      {exportNotice && (
+        <div className="bg-[#1F242B] border-l-4 border-[#C0D725] text-white p-3 rounded-bx shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="w-2 h-2 rounded-full bg-[#C0D725] animate-ping inline-block" />
+            <span>{exportNotice}</span>
+          </div>
+          <button onClick={() => setExportNotice(null)} className="text-gray-400 hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header and Sub-tabs */}
       <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -126,8 +140,12 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
                 Registro de Eventos de Pérdida Operativa y Fallas en Canales (Serie R24)
               </span>
               <button
-                onClick={() => alert("Generando archivo SITI R24 en formato XML oficial...")}
-                className="text-xs bg-[#C0D725] text-[#1F242B] font-bold px-2.5 py-1 rounded flex items-center gap-1 hover:bg-[#AEC41D]"
+                type="button"
+                onClick={() => {
+                  setExportNotice("Generando archivo SITI R24 en formato XML oficial validado ante CNBV...");
+                  setTimeout(() => setExportNotice(null), 4000);
+                }}
+                className="text-xs bg-[#C0D725] text-[#1F242B] font-bold px-2.5 py-1 rounded flex items-center gap-1 hover:bg-[#AEC41D] cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Exportar SITI CNBV</span>

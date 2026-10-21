@@ -57,9 +57,16 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Acciones en curso
-  const [generatingAIPlans, setGeneratingAIPlans] = useState(false);
   const [verifyingPlanId, setVerifyingPlanId] = useState<string | null>(null);
   const [signingPlanId, setSigningPlanId] = useState<string | null>(null);
+
+  // Modal 3: Asistente IA Gemini (Previsualización y Selección de Propuestas)
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [loadingAIProposals, setLoadingAIProposals] = useState(false);
+  const [aiExecutiveDiagnosis, setAiExecutiveDiagnosis] = useState("");
+  const [aiProposals, setAiProposals] = useState<any[]>([]);
+  const [selectedProposalIndexes, setSelectedProposalIndexes] = useState<Set<number>>(new Set());
+  const [committingAIPlans, setCommittingAIPlans] = useState(false);
 
   // Modal 1: Nuevo Plan de Acción
   const [isNewPlanModalOpen, setIsNewPlanModalOpen] = useState(false);
@@ -180,34 +187,97 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
     }
   };
 
-  // 3. Generar Planes con IA para el Proceso
-  const handleGenerateAIPlans = async () => {
+  // 3. Abrir Modal de Sugerencias con IA Gemini (Previsualización en Vivo)
+  const handleOpenAISuggestions = async () => {
+    setIsAIModalOpen(true);
+    setLoadingAIProposals(true);
+    setAiExecutiveDiagnosis("");
+    setAiProposals([]);
+    setSelectedProposalIndexes(new Set());
+
     try {
-      setGeneratingAIPlans(true);
       const res = await fetch("/api/action-plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "AI_SUGGEST_PLANS_FOR_PROCESS",
+          action: "AI_PREVIEW_PLANS_FOR_PROCESS",
+          processId: selectedProcessId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.proposals) {
+        setAiExecutiveDiagnosis(data.executiveDiagnosis || "");
+        setAiProposals(data.proposals);
+        // Todos seleccionados por defecto
+        setSelectedProposalIndexes(new Set(data.proposals.map((_: any, idx: number) => idx)));
+      } else {
+        setStatusBanner("Aviso: " + (data.error || "No se pudieron obtener propuestas de IA"));
+        setTimeout(() => setStatusBanner(null), 4000);
+      }
+    } catch (err) {
+      console.error("Error fetching AI proposals:", err);
+      setStatusBanner("Error al conectar con B×+ Risk Copilot (Gemini API)");
+      setTimeout(() => setStatusBanner(null), 4000);
+    } finally {
+      setLoadingAIProposals(false);
+    }
+  };
+
+  // 3b. Confirmar e Insertar Propuestas Seleccionadas en BD
+  const handleCommitSelectedAIPlans = async () => {
+    const selectedList = aiProposals.filter((_, idx) => selectedProposalIndexes.has(idx));
+    if (selectedList.length === 0) return;
+
+    try {
+      setCommittingAIPlans(true);
+      const res = await fetch("/api/action-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "AI_COMMIT_SELECTED_PLANS",
+          selectedProposals: selectedList,
           processId: selectedProcessId,
           userRole: currentRole,
+          executiveDiagnosis: aiExecutiveDiagnosis,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setStatusBanner(
-          `✨ B×+ Risk Copilot ha diseñado e insertado ${data.count} planes de mitigación y Quick-Wins para el proceso.`
+          `✨ B×+ Risk Copilot: Se insertaron exitosamente ${data.count} planes de mitigación en la Matriz 2×2.`
         );
-        setTimeout(() => setStatusBanner(null), 4500);
+        setTimeout(() => setStatusBanner(null), 5000);
+        setIsAIModalOpen(false);
         fetchPlans();
+        fetchRisks();
       } else {
-        setStatusBanner("Aviso: " + (data.error || "No se pudieron generar los planes"));
-        setTimeout(() => setStatusBanner(null), 3500);
+        setStatusBanner("Error: " + (data.error || "No se pudieron guardar los planes"));
+        setTimeout(() => setStatusBanner(null), 4000);
       }
-    } catch (e) {
-      console.error("Error generating AI plans:", e);
+    } catch (err) {
+      console.error("Error committing AI plans:", err);
     } finally {
-      setGeneratingAIPlans(false);
+      setCommittingAIPlans(false);
+    }
+  };
+
+  const toggleProposalSelection = (index: number) => {
+    setSelectedProposalIndexes((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllProposals = () => {
+    if (selectedProposalIndexes.size === aiProposals.length) {
+      setSelectedProposalIndexes(new Set());
+    } else {
+      setSelectedProposalIndexes(new Set(aiProposals.map((_, i) => i)));
     }
   };
 
@@ -400,6 +470,35 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
     return list;
   }, [processScopedPlans, selectedQuadrantFilter, searchTerm]);
 
+  // Proceso actualmente seleccionado
+  const currentProcessObj = useMemo(() => {
+    if (selectedProcessId === "ALL") return null;
+    return processes.find((p) => p.id === selectedProcessId) || null;
+  }, [processes, selectedProcessId]);
+
+  // Agrupamiento por Proceso Bancario para la tabla
+  const groupedDisplayPlans = useMemo(() => {
+    if (tableLayout !== "GROUPED") return [];
+
+    const map = new Map<string, { process: any; plans: any[] }>();
+
+    for (const p of displayPlans) {
+      const proc = p.riskEvent?.process;
+      const procKey = proc?.id || proc?.code || "SIN_PROCESO";
+      if (!map.has(procKey)) {
+        map.set(procKey, {
+          process: proc || { code: "GENÉRICO", name: "Procesos Centrales / Sin Proceso Asignado" },
+          plans: [],
+        });
+      }
+      map.get(procKey)!.plans.push(p);
+    }
+
+    return Array.from(map.values()).sort((a, b) =>
+      (a.process.code || "").localeCompare(b.process.code || "")
+    );
+  }, [displayPlans, tableLayout]);
+
   // Riesgos del proceso seleccionado
   const scopedRisks = useMemo(() => {
     if (selectedProcessId === "ALL") return risks;
@@ -516,6 +615,212 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
     { value: "0.25", label: "Baja Mitigación (25% reducción de pérdidas)" },
   ];
 
+  const renderPlanRow = (p: any) => {
+    const shift = calculateTargetShift(p);
+    const roi = (p.expectedPEAReductionMXN / (p.estimatedCostMXN || 1)).toFixed(1);
+    const qType = getPlanQuadrant(p);
+
+    return (
+      <tr
+        key={p.id}
+        className={`transition-colors ${
+          highlightedPlanId === p.id
+            ? "bg-lime-50/80 font-medium"
+            : "hover:bg-gray-50/80"
+        }`}
+      >
+        {/* Código y Cuadrante */}
+        <td className="py-3 px-3 align-top font-mono">
+          <div className="font-bold text-gray-900">{p.code}</div>
+          <div className="mt-1">
+            {qType === "Q1_QUICK_WIN" ? (
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-0.5">
+                <Zap className="w-2.5 h-2.5 fill-emerald-600" />
+                <span>Q1</span>
+              </span>
+            ) : qType === "Q2_STRUCTURAL" ? (
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-100 text-[#267C89] border border-cyan-300">
+                Q2 Core
+              </span>
+            ) : qType === "Q3_TACTICAL" ? (
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                Q3 Táctico
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-gray-100 text-gray-700 border border-gray-300">
+                Q4 Baja
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Título y Descripción */}
+        <td className="py-3 px-3 align-top">
+          <div className="font-bold text-gray-900 leading-snug">{p.title}</div>
+          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
+            {p.description}
+          </div>
+          {p.isSuggestedByAI && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-mono bg-cyan-50 text-[#267C89] px-1.5 py-0.2 rounded mt-1 font-semibold border border-cyan-200">
+              <Sparkles className="w-2.5 h-2.5" />
+              <span>Sugerido por Copilot IA</span>
+            </span>
+          )}
+        </td>
+
+        {/* Riesgo & Proceso / Nodo */}
+        <td className="py-3 px-3 align-top">
+          <div className="font-medium text-gray-900 flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold text-gray-700">
+              {p.riskEvent?.code}
+            </span>
+            <span className="truncate max-w-[150px]" title={p.riskEvent?.title}>
+              {p.riskEvent?.title}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 mt-1 text-[9px] font-mono">
+            {p.riskEvent?.process && (
+              <span
+                className="text-[#3299A8] bg-cyan-50 px-1.5 py-0.2 rounded border border-cyan-200 truncate max-w-[130px]"
+                title={p.riskEvent.process.name}
+              >
+                {p.riskEvent.process.code}
+              </span>
+            )}
+            {p.riskEvent?.processNode && (
+              <span
+                className="text-gray-600 bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200 truncate max-w-[130px]"
+                title={p.riskEvent.processNode.label}
+              >
+                {p.riskEvent.processNode.label}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Salto 5x5 */}
+        <td className="py-3 px-3 align-top text-center">
+          <div className="inline-flex items-center gap-1 font-mono text-[10px]">
+            <span
+              className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
+                shift.baseZone
+              )}`}
+            >
+              {shift.baseP}×{shift.baseI}
+            </span>
+            <ArrowRight className="w-3 h-3 text-emerald-600" />
+            <span
+              className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
+                shift.targetZone
+              )}`}
+            >
+              {shift.targetP}×{shift.targetI}
+            </span>
+          </div>
+          <div className="text-[10px] text-emerald-700 font-mono font-semibold mt-0.5">
+            -{(p.improvementPotentialPct * 100).toFixed(0)}% Reducción
+          </div>
+        </td>
+
+        {/* Inversión & ROI */}
+        <td className="py-3 px-3 align-top text-center font-mono">
+          <div className="font-bold text-gray-800">{formatMXN(p.estimatedCostMXN)}</div>
+          <div className="text-[10px] text-emerald-700 font-semibold">
+            -{formatMXN(p.expectedPEAReductionMXN)}
+          </div>
+          <div className="mt-0.5">
+            <span className="text-[9px] bg-[#C0D725] text-[#1F242B] px-1 py-0.2 rounded font-bold border border-[#AEC41D]">
+              {roi}x ROI
+            </span>
+          </div>
+        </td>
+
+        {/* Plazo */}
+        <td className="py-3 px-3 align-top text-center font-mono">
+          <div className="font-bold text-gray-800">{p.estimatedDays} días</div>
+          <div className="text-[9px] text-gray-400">{p.timeScale}</div>
+        </td>
+
+        {/* Gobernanza 3 Líneas */}
+        <td className="py-3 px-3 align-top text-center space-y-1">
+          {/* 1ª Línea */}
+          <div>
+            {p.signedByBusinessHead ? (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                <Check className="w-2.5 h-2.5 text-emerald-600" />
+                <span>1ª L: Firmado</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200">
+                <span>1ª L: Pendiente</span>
+              </span>
+            )}
+          </div>
+
+          {/* Evidencias SHA-256 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPlanForEvidence(p);
+                setIsEvidenceModalOpen(true);
+              }}
+              className="text-[9px] font-mono text-[#3299A8] hover:underline inline-flex items-center gap-0.5"
+            >
+              <Paperclip className="w-2.5 h-2.5" />
+              <span>{p.evidences?.length || 0} Evidencia(s)</span>
+            </button>
+          </div>
+
+          {/* 2ª Línea UAIR */}
+          <div>
+            {p.status === "COMPLETED_VERIFIED" ? (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-300">
+                <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                <span>UAIR Verificado</span>
+              </span>
+            ) : (
+              <span className="text-[9px] text-gray-400 font-mono">UAIR Pendiente</span>
+            )}
+          </div>
+        </td>
+
+        {/* Estado & Acciones */}
+        <td className="py-3 px-3 align-top text-center space-y-1">
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700 block">
+            {p.status}
+          </span>
+
+          <div className="flex items-center justify-center gap-1 pt-1">
+            {!p.signedByBusinessHead && (
+              <button
+                type="button"
+                onClick={() => handleSignPlan(p.id)}
+                className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                title="Firmar compromiso (1ª Línea)"
+              >
+                Firmar
+              </button>
+            )}
+
+            {p.status !== "COMPLETED_VERIFIED" && (
+              <button
+                type="button"
+                disabled={verifyingPlanId === p.id}
+                onClick={() => handleVerifyAndApplyPlan(p.id)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer disabled:opacity-50"
+                title="Verificar y aplicar mitigación (2ª Línea UAIR)"
+              >
+                Verificar
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="space-y-6 w-full">
       {/* Notificación de Estado / Banner */}
@@ -575,15 +880,15 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
             {/* Botón Sugerir Planes con IA */}
             <button
               type="button"
-              disabled={generatingAIPlans}
-              onClick={handleGenerateAIPlans}
+              disabled={loadingAIProposals}
+              onClick={handleOpenAISuggestions}
               className="bg-white border border-[#3299A8] hover:bg-cyan-50 text-[#1F242B] text-xs font-bold px-3 py-2 rounded-md shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-              title="Generar 2-3 planes adaptados con IA para los riesgos huérfanos de este proceso"
+              title="Abrir Asistente IA Gemini para previsualizar y seleccionar propuestas de mitigación"
             >
-              {generatingAIPlans ? (
+              {loadingAIProposals ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3299A8]" />
-                  <span>Razonando Planes...</span>
+                  <span>Razonando con Gemini...</span>
                 </>
               ) : (
                 <>
@@ -1473,211 +1778,63 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {displayPlans.map((p) => {
-                const shift = calculateTargetShift(p);
-                const roi = (p.expectedPEAReductionMXN / (p.estimatedCostMXN || 1)).toFixed(1);
-                const qType = getPlanQuadrant(p);
+              {tableLayout === "GROUPED" ? (
+                groupedDisplayPlans.map((group) => {
+                  const groupSavings = group.plans.reduce(
+                    (acc: number, p: any) => acc + (p.expectedPEAReductionMXN || 0),
+                    0
+                  );
+                  const groupCost = group.plans.reduce(
+                    (acc: number, p: any) => acc + (p.estimatedCostMXN || 0),
+                    0
+                  );
+                  const groupROI = (groupSavings / (groupCost || 1)).toFixed(1);
 
-                return (
-                  <tr
-                    key={p.id}
-                    className={`transition-colors ${
-                      highlightedPlanId === p.id
-                        ? "bg-lime-50/80 font-medium"
-                        : "hover:bg-gray-50/80"
-                    }`}
-                  >
-                    {/* Código y Cuadrante */}
-                    <td className="py-3 px-3 align-top font-mono">
-                      <div className="font-bold text-gray-900">{p.code}</div>
-                      <div className="mt-1">
-                        {qType === "Q1_QUICK_WIN" ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-0.5">
-                            <Zap className="w-2.5 h-2.5 fill-emerald-600" />
-                            <span>Q1</span>
-                          </span>
-                        ) : qType === "Q2_STRUCTURAL" ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-100 text-[#267C89] border border-cyan-300">
-                            Q2 Core
-                          </span>
-                        ) : qType === "Q3_TACTICAL" ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                            Q3 Táctico
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-gray-100 text-gray-700 border border-gray-300">
-                            Q4 Baja
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                  return (
+                    <React.Fragment key={group.process.code || group.process.name}>
+                      {/* Fila Encabezado de Proceso Bancario */}
+                      <tr className="bg-[#1F242B] text-white">
+                        <td colSpan={8} className="py-2.5 px-3 border-y border-gray-800">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[#C0D725] bg-[#2A313C] px-2 py-0.5 rounded text-[11px] font-bold border border-[#C0D725]/30">
+                                {group.process.code}
+                              </span>
+                              <span className="font-bold text-white text-xs tracking-wide">
+                                {group.process.name}
+                              </span>
+                              {group.process.macroProcess && (
+                                <span className="text-gray-400 text-[10px] hidden md:inline">
+                                  • {group.process.macroProcess.name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] font-mono">
+                              <span className="bg-[#2A313C] text-gray-200 px-2 py-0.5 rounded border border-gray-700">
+                                {group.plans.length} {group.plans.length === 1 ? "plan" : "planes"}
+                              </span>
+                              <span className="text-emerald-400 font-semibold">
+                                -ΔPEA: -{formatMXN(groupSavings)}
+                              </span>
+                              <span className="text-gray-300">
+                                Inv: {formatMXN(groupCost)}
+                              </span>
+                              <span className="text-[#C0D725] font-bold">
+                                ROI: {groupROI}x
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
 
-                    {/* Título y Descripción */}
-                    <td className="py-3 px-3 align-top">
-                      <div className="font-bold text-gray-900 leading-snug">{p.title}</div>
-                      <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
-                        {p.description}
-                      </div>
-                      {p.isSuggestedByAI && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-mono bg-cyan-50 text-[#267C89] px-1.5 py-0.2 rounded mt-1 font-semibold border border-cyan-200">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span>Sugerido por Copilot IA</span>
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Riesgo & Proceso / Nodo */}
-                    <td className="py-3 px-3 align-top">
-                      <div className="font-medium text-gray-900 flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold text-gray-700">
-                          {p.riskEvent?.code}
-                        </span>
-                        <span className="truncate max-w-[150px]" title={p.riskEvent?.title}>
-                          {p.riskEvent?.title}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1 mt-1 text-[9px] font-mono">
-                        {p.riskEvent?.process && (
-                          <span
-                            className="text-[#3299A8] bg-cyan-50 px-1.5 py-0.2 rounded border border-cyan-200 truncate max-w-[130px]"
-                            title={p.riskEvent.process.name}
-                          >
-                            {p.riskEvent.process.code}
-                          </span>
-                        )}
-                        {p.riskEvent?.processNode && (
-                          <span
-                            className="text-gray-600 bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200 truncate max-w-[130px]"
-                            title={p.riskEvent.processNode.label}
-                          >
-                            {p.riskEvent.processNode.label}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Salto 5x5 */}
-                    <td className="py-3 px-3 align-top text-center">
-                      <div className="inline-flex items-center gap-1 font-mono text-[10px]">
-                        <span
-                          className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
-                            shift.baseZone
-                          )}`}
-                        >
-                          {shift.baseP}×{shift.baseI}
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-emerald-600" />
-                        <span
-                          className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
-                            shift.targetZone
-                          )}`}
-                        >
-                          {shift.targetP}×{shift.targetI}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-emerald-700 font-mono font-semibold mt-0.5">
-                        -{(p.improvementPotentialPct * 100).toFixed(0)}% Reducción
-                      </div>
-                    </td>
-
-                    {/* Inversión & ROI */}
-                    <td className="py-3 px-3 align-top text-center font-mono">
-                      <div className="font-bold text-gray-800">{formatMXN(p.estimatedCostMXN)}</div>
-                      <div className="text-[10px] text-emerald-700 font-semibold">
-                        -{formatMXN(p.expectedPEAReductionMXN)}
-                      </div>
-                      <div className="mt-0.5">
-                        <span className="text-[9px] bg-[#C0D725] text-[#1F242B] px-1 py-0.2 rounded font-bold border border-[#AEC41D]">
-                          {roi}x ROI
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Plazo */}
-                    <td className="py-3 px-3 align-top text-center font-mono">
-                      <div className="font-bold text-gray-800">{p.estimatedDays} días</div>
-                      <div className="text-[9px] text-gray-400">{p.timeScale}</div>
-                    </td>
-
-                    {/* Gobernanza 3 Líneas */}
-                    <td className="py-3 px-3 align-top text-center space-y-1">
-                      {/* 1ª Línea */}
-                      <div>
-                        {p.signedByBusinessHead ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                            <Check className="w-2.5 h-2.5 text-emerald-600" />
-                            <span>1ª L: Firmado</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200">
-                            <span>1ª L: Pendiente</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Evidencias SHA-256 */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPlanForEvidence(p);
-                            setIsEvidenceModalOpen(true);
-                          }}
-                          className="text-[9px] font-mono text-[#3299A8] hover:underline inline-flex items-center gap-0.5"
-                        >
-                          <Paperclip className="w-2.5 h-2.5" />
-                          <span>{p.evidences?.length || 0} Evidencia(s)</span>
-                        </button>
-                      </div>
-
-                      {/* 2ª Línea UAIR */}
-                      <div>
-                        {p.status === "COMPLETED_VERIFIED" ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-300">
-                            <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
-                            <span>UAIR Verificado</span>
-                          </span>
-                        ) : (
-                          <span className="text-[9px] text-gray-400 font-mono">UAIR Pendiente</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Estado & Acciones */}
-                    <td className="py-3 px-3 align-top text-center space-y-1">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700 block">
-                        {p.status}
-                      </span>
-
-                      <div className="flex items-center justify-center gap-1 pt-1">
-                        {!p.signedByBusinessHead && (
-                          <button
-                            type="button"
-                            onClick={() => handleSignPlan(p.id)}
-                            className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer"
-                            title="Firmar compromiso (1ª Línea)"
-                          >
-                            Firmar
-                          </button>
-                        )}
-
-                        {p.status !== "COMPLETED_VERIFIED" && (
-                          <button
-                            type="button"
-                            disabled={verifyingPlanId === p.id}
-                            onClick={() => handleVerifyAndApplyPlan(p.id)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer disabled:opacity-50"
-                            title="Verificar y aplicar mitigación (2ª Línea UAIR)"
-                          >
-                            Verificar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Filas de Planes del Proceso */}
+                      {group.plans.map((p: any) => renderPlanRow(p))}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                displayPlans.map((p) => renderPlanRow(p))
+              )}
               {displayPlans.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-gray-400 text-xs">
@@ -1954,6 +2111,311 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 3: ASISTENTE IA GEMINI — PREVISUALIZACIÓN Y SELECCIÓN DE PROPUESTAS
+         ========================================================================= */}
+      {isAIModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col border border-gray-200 animate-in zoom-in-95 duration-200">
+            {/* Cabecera del Modal */}
+            <div className="flex items-start justify-between pb-3 border-b border-gray-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-[#1F242B] text-[#C0D725]">
+                  <Sparkles className="w-5 h-5 text-[#C0D725]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                      Google Gemini 2.5 Flash en Vivo
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">
+                      CUB Art. 88 • Banxico • NIF C-16
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 font-serif mt-0.5">
+                    Asistente IA: Propuestas de Mitigación y Quick-Wins para el Proceso
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Proceso:{" "}
+                    <strong className="text-gray-800">
+                      {selectedProcessId === "ALL"
+                        ? "Portafolio Consolidado (Todos los Procesos)"
+                        : currentProcessObj
+                        ? `${currentProcessObj.code} — ${currentProcessObj.name}`
+                        : "Proceso Bancario"}
+                    </strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAIModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido Dinámico: Cargando vs. Propuestas */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {loadingAIProposals ? (
+                <div className="py-16 text-center space-y-4">
+                  <div className="inline-flex p-4 rounded-full bg-cyan-50 border border-cyan-200 text-[#3299A8]">
+                    <RefreshCw className="w-8 h-8 animate-spin" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 font-serif">
+                      Gemini 2.5 Flash analizando nodos del diagrama, riesgos en el Radar de Brechas y controles NF...
+                    </h4>
+                    <p className="text-xs text-gray-500 max-w-lg mx-auto mt-1">
+                      Evaluando parámetros CUB Art. 88 (CNBV), Circular 8/2019 Banxico y NIF C-16 para diseñar
+                      Quick-Wins y proyectos estructurales con salto cuantificado 5×5 y ROI financiero.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-mono text-gray-600">
+                    <span className="bg-gray-100 px-2.5 py-1 rounded border border-gray-200">
+                      1. Análisis Causal por Nodo
+                    </span>
+                    <span className="bg-gray-100 px-2.5 py-1 rounded border border-gray-200">
+                      2. Estimación Salto Matriz 5×5
+                    </span>
+                    <span className="bg-gray-100 px-2.5 py-1 rounded border border-gray-200">
+                      3. Cuantificación ROI ΔPEA / Costo
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Dictamen Ejecutivo de Gemini */}
+                  {aiExecutiveDiagnosis && (
+                    <div className="p-3.5 bg-[#1F242B] text-white rounded-lg border border-[#3299A8]/40 shadow-sm flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-[#C0D725] shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <div className="font-bold text-[#C0D725] tracking-wide uppercase text-[10px] font-mono">
+                          Dictamen Ejecutivo B×+ Copilot (Gemini 2.5 Flash)
+                        </div>
+                        <p className="text-gray-200 leading-relaxed font-sans">{aiExecutiveDiagnosis}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Barra de Selección y Conteo */}
+                  <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-xs">
+                    <div className="font-semibold text-gray-800 flex items-center gap-2">
+                      <span>Planes Propuestos ({aiProposals.length} iniciativas diseñadas)</span>
+                      <span className="text-gray-500 font-normal">
+                        • {selectedProposalIndexes.size} seleccionada(s) para inserción
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllProposals}
+                      className="text-[#3299A8] hover:text-[#267C89] font-bold text-xs hover:underline cursor-pointer"
+                    >
+                      {selectedProposalIndexes.size === aiProposals.length
+                        ? "Deseleccionar Todas"
+                        : "Seleccionar Todas"}
+                    </button>
+                  </div>
+
+                  {/* Tarjetas de Propuestas con Checkbox */}
+                  <div className="space-y-3">
+                    {aiProposals.map((prop, idx) => {
+                      const isSelected = selectedProposalIndexes.has(idx);
+                      const isQW = prop.quadrant === "Q1_QUICK_WIN";
+                      const isStruct = prop.quadrant === "Q2_STRUCTURAL";
+                      const isTactical = prop.quadrant === "Q3_TACTICAL";
+
+                      return (
+                        <div
+                          key={prop.riskEventId + "-" + idx}
+                          onClick={() => toggleProposalSelection(idx)}
+                          className={`p-3.5 rounded-lg border transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-white border-[#3299A8] shadow-sm ring-1 ring-[#3299A8]/30"
+                              : "bg-gray-50/70 border-gray-200 opacity-60 hover:opacity-90"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleProposalSelection(idx)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded text-[#3299A8] focus:ring-[#3299A8] cursor-pointer mt-1"
+                            />
+
+                            <div className="flex-1 space-y-2">
+                              {/* Encabezado de la propuesta */}
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {isQW ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 font-mono">
+                                      <Zap className="w-3 h-3 fill-emerald-600" />
+                                      <span>⚡ I. Quick-Win (≤90d & ≥60%)</span>
+                                    </span>
+                                  ) : isStruct ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-[#267C89] border border-cyan-300 inline-flex items-center gap-1 font-mono">
+                                      <Building2 className="w-3 h-3" />
+                                      <span>🏗️ II. Estructural Core</span>
+                                    </span>
+                                  ) : isTactical ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1 font-mono">
+                                      <span>🔧 III. Mejora Táctica</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-300 inline-flex items-center gap-1 font-mono">
+                                      <span>⏸️ IV. Baja Prioridad</span>
+                                    </span>
+                                  )}
+
+                                  <span className="font-mono text-xs font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                    {prop.riskCode}
+                                  </span>
+
+                                  <span className="text-xs font-semibold text-gray-700 truncate max-w-[280px]">
+                                    {prop.riskTitle}
+                                  </span>
+                                </div>
+
+                                <div className="text-[11px] font-mono text-[#3299A8] bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                                  Nodo: {prop.processNodeLabel}
+                                </div>
+                              </div>
+
+                              {/* Título y Descripción */}
+                              <div>
+                                <h4 className="text-xs font-bold text-gray-900 leading-snug">{prop.title}</h4>
+                                <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
+                                  {prop.description}
+                                </p>
+                              </div>
+
+                              {/* Salto 5x5 y Métricas Cuantitativas */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                                {/* Salto en Matriz 5x5 */}
+                                <div className="inline-flex items-center gap-1.5 font-mono text-[10px]">
+                                  <span className="text-gray-500 font-sans font-semibold">Salto 5×5:</span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
+                                      prop.currentZone
+                                    )}`}
+                                  >
+                                    {prop.currentProb}×{prop.currentImp} ({prop.currentZone})
+                                  </span>
+                                  <ArrowRight className="w-3 h-3 text-emerald-600" />
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded font-bold border ${getZoneBadgeClasses(
+                                      prop.targetZone
+                                    )}`}
+                                  >
+                                    {prop.targetProb}×{prop.targetImp} ({prop.targetZone})
+                                  </span>
+                                </div>
+
+                                {/* Chips Cuantitativos */}
+                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
+                                  <span className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded font-semibold border border-emerald-200">
+                                    Mejora: {(prop.improvementPotentialPct * 100).toFixed(0)}%
+                                  </span>
+                                  <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200">
+                                    Costo: {formatMXN(prop.estimatedCostMXN)}
+                                  </span>
+                                  <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded border border-gray-200">
+                                    Plazo: {prop.estimatedDays}d
+                                  </span>
+                                  <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                                    -ΔPEA: -{formatMXN(prop.expectedPEAReductionMXN)}
+                                  </span>
+                                  <span className="bg-[#C0D725] text-[#1F242B] px-1.5 py-0.5 rounded font-bold border border-[#AEC41D]">
+                                    ROI: {prop.roiMultiplier}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Rationale AI */}
+                              {prop.rationaleAI && (
+                                <div className="text-[11px] text-gray-500 bg-gray-50 p-2 rounded border border-gray-200 font-sans flex items-start gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-[#3299A8] shrink-0 mt-0.5" />
+                                  <span>
+                                    <strong className="text-gray-700">Justificación IA:</strong>{" "}
+                                    {prop.rationaleAI}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Barra Inferior / Acciones del Modal */}
+            {!loadingAIProposals && aiProposals.length > 0 && (
+              <div className="pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3 text-xs font-mono">
+                  <span className="text-gray-600">
+                    <strong className="text-gray-900 font-bold">{selectedProposalIndexes.size}</strong> de{" "}
+                    {aiProposals.length} iniciativas seleccionadas
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-gray-700">
+                    Inversión:{" "}
+                    <strong>
+                      {formatMXN(
+                        aiProposals
+                          .filter((_, idx) => selectedProposalIndexes.has(idx))
+                          .reduce((s, p) => s + (p.estimatedCostMXN || 0), 0)
+                      )}
+                    </strong>
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-emerald-700 font-semibold">
+                    Ahorro Anual -ΔPEA: -
+                    {formatMXN(
+                      aiProposals
+                        .filter((_, idx) => selectedProposalIndexes.has(idx))
+                        .reduce((s, p) => s + (p.expectedPEAReductionMXN || 0), 0)
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAIModalOpen(false)}
+                    className="px-3.5 py-1.5 border border-gray-300 rounded font-semibold text-gray-600 hover:bg-gray-50 text-xs cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedProposalIndexes.size === 0 || committingAIPlans}
+                    onClick={handleCommitSelectedAIPlans}
+                    className="px-4 py-2 bg-[#1F242B] hover:bg-[#2A313C] text-white rounded font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {committingAIPlans ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C0D725]" />
+                        <span>Insertando Planes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-[#C0D725]" />
+                        <span>Insertar {selectedProposalIndexes.size} Planes en la Matriz 2×2</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

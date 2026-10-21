@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db";
 import { recordAuditLog } from "@/lib/audit";
 import { RoleType } from "@/types";
 import { mapScoreTo5x5Zone } from "@/lib/engines/operational-risk-engine";
+import {
+  generateProcessPlanProposalsWithGemini,
+  CandidateRiskForAI,
+  AIPredictedPlanProposal,
+} from "@/lib/ai/gemini";
 
 /**
  * Auto-hidratación de Planes de Acción para asegurar cobertura en todos los procesos
@@ -540,7 +545,179 @@ export async function POST(request: Request) {
     }
 
     // =========================================================================
-    // ACCIÓN 4: Generador de Planes & Quick-Wins con IA para un Proceso Específico
+    // ACCIÓN 4A: Previsualización de Planes con IA Gemini (Sin guardar en BD)
+    // =========================================================================
+    if (action === "AI_PREVIEW_PLANS_FOR_PROCESS") {
+      const { processId } = body;
+      const whereClause: any = {};
+      if (processId && processId !== "ALL") {
+        whereClause.processId = processId;
+      }
+
+      const risks = await prisma.riskEvent.findMany({
+        where: whereClause,
+        include: {
+          process: true,
+          processNode: true,
+          actionPlans: true,
+          controls: { include: { control: true } },
+        },
+        orderBy: [{ residualScore: "desc" }],
+      });
+
+      if (risks.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "No se encontraron riesgos para el proceso seleccionado" },
+          { status: 404 }
+        );
+      }
+
+      // Priorizar candidatos del Radar de Brechas:
+      // 1. Riesgos huérfanos sin ningún plan de acción
+      // 2. Riesgos con controles No Formalizados (NF) bajo CUB Art. 88
+      // 3. Riesgos en zonas de severidad RED / ORANGE
+      const orphans = risks.filter((r) => r.actionPlans.length === 0);
+      const withNF = risks.filter((r) => r.controls.some((c) => !c.control?.isFormalized));
+      const priorityCandidates = Array.from(new Set([...orphans, ...withNF, ...risks]));
+      const targetRisks = priorityCandidates.slice(0, 4);
+
+      const firstProc = targetRisks[0]?.process;
+      const procCode = firstProc?.code || (processId === "ALL" ? "PORTAFOLIO" : "PROC");
+      const procName = firstProc?.name || (processId === "ALL" ? "Portafolio Consolidado" : "Proceso Bancario");
+
+      const candidatesForAI: CandidateRiskForAI[] = targetRisks.map((r) => ({
+        riskId: r.id,
+        code: r.code,
+        title: r.title,
+        cause: r.cause,
+        eventDescription: r.eventDescription,
+        residualProbability: r.residualProbability,
+        residualImpact: r.residualImpact,
+        residualZone: r.residualZone,
+        expectedAnnualLossPEA: r.expectedAnnualLossPEA,
+        maxAnnualLossPMA: r.maxAnnualLossPMA,
+        processCode: r.process?.code || procCode,
+        processName: r.process?.name || procName,
+        processNodeLabel: r.processNode?.label || "Paso Operativo",
+        processNodeType: r.processNode?.nodeType || "TASK",
+        hasNFControl: r.controls.some((c) => !c.control?.isFormalized),
+        controlId: r.controls?.[0]?.controlId || null,
+      }));
+
+      const aiResult = await generateProcessPlanProposalsWithGemini(procCode, procName, candidatesForAI);
+
+      return NextResponse.json({
+        success: true,
+        executiveDiagnosis: aiResult.executiveDiagnosis,
+        proposals: aiResult.proposals,
+        processCode: procCode,
+        processName: procName,
+        candidateCount: candidatesForAI.length,
+      });
+    }
+
+    // =========================================================================
+    // ACCIÓN 4B: Inserción en BD de Propuestas Seleccionadas por el Usuario
+    // =========================================================================
+    if (action === "AI_COMMIT_SELECTED_PLANS") {
+      const { selectedProposals, processId, userRole = "UAIR_ADMIN", executiveDiagnosis } = body;
+
+      if (!selectedProposals || !Array.isArray(selectedProposals) || selectedProposals.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "No se proporcionaron propuestas válidas para insertar" },
+          { status: 400 }
+        );
+      }
+
+      const user =
+        (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+        (await prisma.user.findFirst());
+      if (!user) {
+        return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 400 });
+      }
+
+      const createdPlans: any[] = [];
+
+      for (const prop of selectedProposals) {
+        const totalCount = await prisma.actionPlan.count();
+        const code = `PA-2026-${String(totalCount + 1).padStart(3, "0")}`;
+
+        const impPct = Number(prop.improvementPotentialPct) || 0.65;
+        const days = Number(prop.estimatedDays) || 45;
+        const cost = Number(prop.estimatedCostMXN) || 120000;
+        const costScale = prop.costScale || (cost <= 100000 ? "LOW" : cost <= 400000 ? "MEDIUM" : "HIGH");
+        const timeScale = days <= 45 ? "LOW" : days <= 90 ? "MEDIUM" : "HIGH";
+
+        const isQW =
+          prop.quadrant === "Q1_QUICK_WIN" ||
+          (impPct >= 0.6 && days <= 90 && (costScale === "LOW" || costScale === "VERY_LOW"));
+
+        const newPlan = await prisma.actionPlan.create({
+          data: {
+            code,
+            title: prop.title,
+            description: prop.description,
+            planTypes: JSON.stringify(prop.planTypes || ["TECHNOLOGY"]),
+            riskEventId: prop.riskEventId,
+            controlId: prop.controlId || null,
+            ownerId: user.id,
+            improvementPotentialPct: impPct,
+            estimatedCostMXN: cost,
+            costScale,
+            estimatedDays: days,
+            timeScale,
+            combinedEffortScore: isQW ? 2.0 : 3.5,
+            expectedPEAReductionMXN: Number(prop.expectedPEAReductionMXN) || 0,
+            expectedPMAReductionMXN: Number(prop.expectedPMAReductionMXN) || 0,
+            isQuickWin: isQW,
+            isSuggestedByAI: true,
+            status: "DRAFT",
+            dueDate: new Date(Date.now() + days * 24 * 3600 * 1000),
+            signedByBusinessHead: false,
+          },
+          include: {
+            riskEvent: {
+              include: {
+                businessUnit: true,
+                taxonomy: true,
+                process: { include: { macroProcess: true } },
+                processNode: true,
+                controls: { include: { control: true } },
+              },
+            },
+            control: true,
+            owner: true,
+            evidences: true,
+          },
+        });
+
+        createdPlans.push(newPlan);
+      }
+
+      await recordAuditLog({
+        userId: user.id,
+        userRole: userRole as RoleType,
+        actionType: "AI_GENERATE_PROCESS_PLANS",
+        entityName: "ActionPlan",
+        entityId: processId || "PORTFOLIO",
+        previousState: null,
+        newState: {
+          count: createdPlans.length,
+          processId,
+          planCodes: createdPlans.map((p) => p.code),
+          executiveDiagnosis: executiveDiagnosis || null,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        plans: createdPlans,
+        count: createdPlans.length,
+      });
+    }
+
+    // =========================================================================
+    // ACCIÓN 4C: Compatibilidad Retroactiva para AI_SUGGEST_PLANS_FOR_PROCESS
     // =========================================================================
     if (action === "AI_SUGGEST_PLANS_FOR_PROCESS") {
       const { processId, userRole = "UAIR_ADMIN" } = body;
@@ -567,7 +744,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // Priorizar riesgos huérfanos sin plan, o con controles No Formalizados (NF), o en zonas críticas
       const orphans = risks.filter((r) => r.actionPlans.length === 0);
       const candidates = orphans.length > 0 ? orphans : risks;
       const targetRisks = candidates.slice(0, 3);
@@ -579,53 +755,58 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Usuario no encontrado" }, { status: 400 });
       }
 
-      const createdPlans: any[] = [];
+      const firstProc = targetRisks[0]?.process;
+      const procCode = firstProc?.code || "PROC";
+      const procName = firstProc?.name || "Proceso Bancario";
 
-      for (let i = 0; i < targetRisks.length; i++) {
-        const r = targetRisks[i];
+      const candidatesForAI: CandidateRiskForAI[] = targetRisks.map((r) => ({
+        riskId: r.id,
+        code: r.code,
+        title: r.title,
+        cause: r.cause,
+        eventDescription: r.eventDescription,
+        residualProbability: r.residualProbability,
+        residualImpact: r.residualImpact,
+        residualZone: r.residualZone,
+        expectedAnnualLossPEA: r.expectedAnnualLossPEA,
+        maxAnnualLossPMA: r.maxAnnualLossPMA,
+        processCode: r.process?.code || procCode,
+        processName: r.process?.name || procName,
+        processNodeLabel: r.processNode?.label || "Paso Operativo",
+        processNodeType: r.processNode?.nodeType || "TASK",
+        hasNFControl: r.controls.some((c) => !c.control?.isFormalized),
+        controlId: r.controls?.[0]?.controlId || null,
+      }));
+
+      const aiResult = await generateProcessPlanProposalsWithGemini(procCode, procName, candidatesForAI);
+
+      const createdPlans: any[] = [];
+      for (const prop of aiResult.proposals) {
         const totalCount = await prisma.actionPlan.count();
         const code = `PA-2026-${String(totalCount + 1).padStart(3, "0")}`;
-
-        // Alternar entre Quick-Win (ejecución ágil <= 90d & >= 60%) y Proyecto Estructural
-        const isQW = i === 0 || i === 2;
-        const impPct = isQW ? (i === 0 ? 0.75 : 0.65) : 0.70;
-        const cost = isQW ? (i === 0 ? 120000 : 85000) : 580000;
-        const days = isQW ? (i === 0 ? 35 : 30) : 115;
-        const costScale = isQW ? "LOW" : "MEDIUM";
-        const timeScale = isQW ? "LOW" : "HIGH";
-
-        const nodeLabel = r.processNode?.label || "Paso Operativo";
-        const procCode = r.process?.code || "PROCESO";
-        const procName = r.process?.name || "Bancario";
-
-        const title = isQW
-          ? `Quick-Win: Automatización y Control Dual Preventivo en ${nodeLabel}`
-          : `Proyecto Estructural: Reingeniería Integral de Control Core en ${nodeLabel}`;
-
-        const description = isQW
-          ? `Implementación inmediata de validación obligatoria y checklist digital pre-transaccional para neutralizar la causa "${r.cause.slice(0, 75)}..." en el nodo ${nodeLabel} (${procCode} — ${procName}).`
-          : `Desarrollo de módulo tecnológico automatizado y formalización de controles de 2ª línea UAIR para erradicar la vulnerabilidad "${r.title}".`;
-
-        const expectedPEA = r.expectedAnnualLossPEA * impPct;
-        const expectedPMA = r.maxAnnualLossPMA * impPct;
+        const impPct = prop.improvementPotentialPct;
+        const days = prop.estimatedDays;
+        const cost = prop.estimatedCostMXN;
+        const costScale = prop.costScale;
+        const isQW = prop.quadrant === "Q1_QUICK_WIN";
 
         const newPlan = await prisma.actionPlan.create({
           data: {
             code,
-            title,
-            description,
-            planTypes: JSON.stringify(isQW ? ["TECHNOLOGY", "PROCESSES"] : ["TECHNOLOGY"]),
-            riskEventId: r.id,
-            controlId: r.controls?.[0]?.controlId || null,
+            title: prop.title,
+            description: prop.description,
+            planTypes: JSON.stringify(prop.planTypes),
+            riskEventId: prop.riskEventId,
+            controlId: prop.controlId || null,
             ownerId: user.id,
             improvementPotentialPct: impPct,
             estimatedCostMXN: cost,
             costScale,
             estimatedDays: days,
-            timeScale,
+            timeScale: days <= 45 ? "LOW" : days <= 90 ? "MEDIUM" : "HIGH",
             combinedEffortScore: isQW ? 2.0 : 3.5,
-            expectedPEAReductionMXN: expectedPEA,
-            expectedPMAReductionMXN: expectedPMA,
+            expectedPEAReductionMXN: prop.expectedPEAReductionMXN,
+            expectedPMAReductionMXN: prop.expectedPMAReductionMXN,
             isQuickWin: isQW,
             isSuggestedByAI: true,
             status: "DRAFT",
@@ -642,7 +823,6 @@ export async function POST(request: Request) {
             evidences: true,
           },
         });
-
         createdPlans.push(newPlan);
       }
 
@@ -651,7 +831,7 @@ export async function POST(request: Request) {
         userRole: userRole as RoleType,
         actionType: "AI_GENERATE_PROCESS_PLANS",
         entityName: "ActionPlan",
-        entityId: processId,
+        entityId: processId || "PORTFOLIO",
         previousState: null,
         newState: {
           count: createdPlans.length,
@@ -666,6 +846,7 @@ export async function POST(request: Request) {
         count: createdPlans.length,
       });
     }
+
 
     // =========================================================================
     // ACCIÓN 5: Crear Nuevo Plan de Acción Manual

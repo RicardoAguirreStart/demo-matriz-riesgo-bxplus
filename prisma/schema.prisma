@@ -1,0 +1,477 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 1. GOBERNANZA, SEGURIDAD (RBAC) Y TRES LÍNEAS DE DEFENSA
+// ============================================================================
+
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  fullName         String
+  role             String         // C_LEVEL_CAIR, UAIR_ADMIN, UAIR_ANALYST, PROCESS_OWNER, CONTROL_OWNER, INTERNAL_AUDITOR
+  businessUnitId   String?
+  businessUnit     BusinessUnit?  @relation(fields: [businessUnitId], references: [id])
+  active           Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+
+  ownedProcesses   Process[]
+  ownedRisks       RiskEvent[]
+  ownedControls    Control[]
+  ownedKRIs        KRI[]
+  actionPlans      ActionPlan[]
+  auditLogs        AuditLog[]
+}
+
+model BusinessUnit {
+  id               String              @id @default(cuid())
+  code             String              @unique // Ej. "TES-01", "CRED-AGRO", "CRED-PYME", "OP-SPEI"
+  name             String              // Ej. "Tesorería y Mercado de Dinero", "Banca Agropecuaria"
+  businessLine     String              // BANCA_EMPRESARIAL_CORPORATIVA, BANCA_PYME, AGRONEGOCIOS, TESORERIA_MERCADO_DINERO, etc.
+  users            User[]
+  macroProcesses   MacroProcess[]
+  riskEvents       RiskEvent[]
+  rafThresholds    RAFThreshold[]
+  financialUploads FinancialLayoutUpload[]
+}
+
+// ============================================================================
+// 2. CADENA DE VALOR Y CREADOR DE DIAGRAMAS DE FLUJO (CANVAS REACT FLOW)
+// ============================================================================
+
+model MacroProcess {
+  id               String          @id @default(cuid())
+  code             String          @unique // Ej. "MP-NEG-01"
+  name             String          // Ej. "Administración de Portafolio e Inversiones"
+  category         String          // BUSINESS, SUPPORT
+  businessUnitId   String
+  businessUnit     BusinessUnit    @relation(fields: [businessUnitId], references: [id])
+  processes        Process[]
+  createdAt        DateTime        @default(now())
+}
+
+model Process {
+  id               String         @id @default(cuid())
+  code             String         @unique // Ej. "PR-INV-01"
+  name             String         // Ej. "Operaciones de Money Market y Liquidez"
+  description      String?
+  macroProcessId   String
+  macroProcess     MacroProcess   @relation(fields: [macroProcessId], references: [id])
+  ownerId          String
+  owner            User           @relation(fields: [ownerId], references: [id])
+  isCriticalBCP    Boolean        @default(false)
+  rtoHours         Int?
+  rpoHours         Int?
+  canvasViewport   String?        // JSON stringified viewport { x, y, zoom }
+  subProcesses     SubProcess[]
+  flowNodes        ProcessNode[]
+  flowEdges        ProcessEdge[]
+  riskEvents       RiskEvent[]
+  updatedAt        DateTime       @updatedAt
+}
+
+model SubProcess {
+  id               String         @id @default(cuid())
+  code             String         @unique
+  name             String
+  processId        String
+  process          Process        @relation(fields: [processId], references: [id], onDelete: Cascade)
+  flowNodes        ProcessNode[]
+  riskEvents       RiskEvent[]
+}
+
+model ProcessNode {
+  id               String           @id @default(cuid())
+  processId        String
+  process          Process          @relation(fields: [processId], references: [id], onDelete: Cascade)
+  subProcessId     String?
+  subProcess       SubProcess?      @relation(fields: [subProcessId], references: [id])
+  nodeType         String           @default("TASK_STEP") // START_END, TASK_STEP, DECISION_GATEWAY, CONTROL_POINT, FRAUD_CHECKPOINT, EXTERNAL_SYSTEM
+  creditStage      String           @default("NOT_APPLICABLE") // PROMOTION, EVALUATION, APPROVAL, INSTRUMENTATION, CONTROL_RECOVERY, NOT_APPLICABLE
+  label            String
+  description      String?
+  responsibleRole  String?
+  systemUsed       String?
+  positionX        Float
+  positionY        Float
+  styleConfig      String?          // JSON stringified config { color, icon, border }
+  bcpThreatDim     String?          // JSON stringified array ["EMPLOYEES", "INFRASTRUCTURE", "SUPPLIERS", "TECHNOLOGY"]
+
+  riskEvents       RiskEvent[]
+  controls         Control[]
+  outgoingEdges    ProcessEdge[]    @relation("SourceNode")
+  incomingEdges    ProcessEdge[]    @relation("TargetNode")
+}
+
+model ProcessEdge {
+  id               String      @id @default(cuid())
+  processId        String
+  process          Process     @relation(fields: [processId], references: [id], onDelete: Cascade)
+  sourceNodeId     String
+  sourceNode       ProcessNode @relation("SourceNode", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNodeId     String
+  targetNode       ProcessNode @relation("TargetNode", fields: [targetNodeId], references: [id], onDelete: Cascade)
+  conditionLabel   String?
+  animated         Boolean     @default(false)
+}
+
+// ============================================================================
+// 3. TAXONOMÍA CNBV, MATRIZ 5x5 VIVA Y CUANTIFICACIÓN PEA / PMA
+// ============================================================================
+
+model RiskTaxonomy {
+  id               String             @id @default(cuid())
+  code             String             @unique // Ej. "RO-N1-07", "CIB-SPEI-01"
+  classification   String             // QUANTIFIABLE_DISCRETIONARY, QUANTIFIABLE_NON_DISCRETIONARY, NON_QUANTIFIABLE_EMERGING
+  riskType         String             // CREDIT, MARKET, LIQUIDITY, OPERATIONAL, TECHNOLOGICAL, LEGAL, CYBERSECURITY, ESG_CLIMATE, REPUTATIONAL, STRATEGIC, FRAUD_INTERNAL_EXTERNAL
+  baselLevel1      String
+  baselLevel2      String
+  baselLevel3      String?
+  cnbvReference    String?
+  riskEvents       RiskEvent[]
+}
+
+model RiskEvent {
+  id                      String        @id @default(cuid())
+  code                    String        @unique // Ej. "RSK-TES-042"
+  title                   String
+  cause                   String        // Causa raíz estructurada
+  eventDescription        String        // Evento de riesgo
+  consequence             String        // Consecuencia / Efecto financiero o normativo
+  taxonomyId              String
+  taxonomy                RiskTaxonomy  @relation(fields: [taxonomyId], references: [id])
+  origin                  String        // PROCESSES, PEOPLE, TECHNOLOGY, EXTERNAL_EVENTS, THIRD_PARTY_SUPPLIERS
+  businessUnitId          String
+  businessUnit            BusinessUnit  @relation(fields: [businessUnitId], references: [id])
+  processId               String
+  process                 Process       @relation(fields: [processId], references: [id])
+  subProcessId            String?
+  subProcess              SubProcess?   @relation(fields: [subProcessId], references: [id])
+  processNodeId           String?
+  processNode             ProcessNode?  @relation(fields: [processNodeId], references: [id])
+  ownerId                 String
+  owner                   User          @relation(fields: [ownerId], references: [id])
+
+  // Valoración Matriz 5x5 CNBV — Riesgo Inherente
+  inherentProbability     Int           // 1 a 5
+  inherentImpact          Int           // 1 a 5
+  inherentScore           Float         // 1 a 25
+  inherentZone            String        // GREEN, YELLOW, ORANGE, RED
+
+  // Valoración Matriz 5x5 CNBV — Riesgo Residual
+  controlMitigationFactor Float         @default(0.0) // [0.0 a 0.85]
+  residualProbability     Float         // 1.0 a 5.0
+  residualImpact          Float         // 1.0 a 5.0
+  residualScore           Float         // 1.0 a 25.0
+  residualZone            String        // GREEN, YELLOW, ORANGE, RED
+
+  // Cuantificación Monetaria Operacional
+  annualFrequencyNet      Float         @default(0.0) // f
+  avgFinancialImpactMXN   Float         @default(0.0) // I_medio
+  worstCaseImpactMXN      Float         @default(0.0) // I_max
+  expectedAnnualLossPEA   Float         @default(0.0) // PEA = f * I_medio
+  maxAnnualLossPMA        Float         @default(0.0) // PMA (VaR 99.9%)
+
+  // Impacto Reputacional y Emergente
+  reputationalImpactLevel Int           @default(1)   // 1 a 5
+  isEmergingRisk          Boolean       @default(false)
+  cyberAttackVector       String?
+  speiImpact              Boolean       @default(false)
+  esgSectorSHCP           String?
+  esgDnshCompliant        Boolean?
+  criticalityRankScore    Float         @default(0.0) // Score para Top 5-7
+
+  // Workflow Tres Líneas de Defensa
+  status                  String        @default("PUBLISHED") // DRAFT, UNDER_REVIEW, PUBLISHED
+
+  controls                RiskControlMap[]
+  kris                    KRI[]
+  lossEvents              LossEvent[]
+  actionPlans             ActionPlan[]
+  historySnapshots        RiskMatrixSnapshot[]
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+// ============================================================================
+// 4. CONTROLES INTERNOS, COBERTURA, EFECTIVIDAD Y PENALIZACIÓN TEMPORAL
+// ============================================================================
+
+model Control {
+  id                  String                 @id @default(cuid())
+  code                String                 @unique // Ej. "CTRL-TES-015"
+  name                String
+  description         String
+  nature              String                 // PREVENTIVE, DETECTIVE, CORRECTIVE
+  automation          String                 // AUTOMATED, SEMI_AUTOMATED, MANUAL
+  executionTiming     String                 // ONLINE_REALTIME, DAILY_D1, WEEKLY_D7, MONTHLY_D30, OCCASIONAL
+  isFormalized        Boolean                @default(false)
+  fraudObservableCode String?                // Anexo 12-E
+  ownerId             String
+  owner               User                   @relation(fields: [ownerId], references: [id])
+  processNodeId       String?
+  processNode         ProcessNode?           @relation(fields: [processNodeId], references: [id])
+
+  coverageLevel       Int                    // 0 a 4
+  rawEffectiveness    Int                    // 0 a 5
+  adjustedEffectScore Float                  // [0.0 - 1.0]
+  hasValidEvidence    Boolean                @default(false)
+
+  risks               RiskControlMap[]
+  evidences           ControlEvidence[]
+  actionPlans         ActionPlan[]
+  updatedAt           DateTime               @updatedAt
+}
+
+model RiskControlMap {
+  id                  String    @id @default(cuid())
+  riskEventId         String
+  riskEvent           RiskEvent @relation(fields: [riskEventId], references: [id], onDelete: Cascade)
+  controlId           String
+  control             Control   @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  mitigatesProbWeight Float     @default(0.5)
+  mitigatesImpWeight  Float     @default(0.5)
+
+  @@unique([riskEventId, controlId])
+}
+
+model ControlEvidence {
+  id                  String    @id @default(cuid())
+  controlId           String
+  control             Control   @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  fileName            String
+  fileUrl             String
+  fileHashSha256      String
+  uploadedById        String
+  validUntil          DateTime
+  verifiedByUAIR      Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+}
+
+// ============================================================================
+// 5. PLANES DE ACCIÓN, EVIDENCIAS Y MATRIZ QUICK-WINS
+// ============================================================================
+
+model ActionPlan {
+  id                       String           @id @default(cuid())
+  code                     String           @unique // Ej. "PA-2026-008"
+  title                    String
+  description              String
+  planTypes                String           // JSON stringified array ["TECHNOLOGY", "PROCESSES"]
+  riskEventId              String
+  riskEvent                RiskEvent        @relation(fields: [riskEventId], references: [id])
+  controlId                String?
+  control                  Control?         @relation(fields: [controlId], references: [id])
+  ownerId                  String
+  owner                    User             @relation(fields: [ownerId], references: [id])
+
+  improvementPotentialPct  Float            // 0.0 a 1.0
+  estimatedCostMXN         Float
+  costScale                String           // VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH
+  estimatedDays            Int
+  timeScale                String           // VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH
+  combinedEffortScore      Float
+  expectedPEAReductionMXN  Float
+  expectedPMAReductionMXN  Float
+  isQuickWin               Boolean          @default(false)
+  isSuggestedByAI          Boolean          @default(false)
+
+  status                   String           @default("DRAFT") // DRAFT, APPROVED_COMMITTED, IN_PROGRESS, EVIDENCE_SUBMITTED, VALIDATED_CLOSED, OVERDUE_ESCALATED
+  dueDate                  DateTime
+  signedByBusinessHead     Boolean          @default(false)
+  evidences                ActionPlanEvidence[]
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+}
+
+model ActionPlanEvidence {
+  id                  String     @id @default(cuid())
+  actionPlanId        String
+  actionPlan          ActionPlan @relation(fields: [actionPlanId], references: [id], onDelete: Cascade)
+  fileName            String
+  fileUrl             String
+  fileHashSha256      String
+  comments            String?
+  approvedByUAIR      Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+}
+
+// ============================================================================
+// 6. MARCO DE APETITO AL RIESGO (RAF Art. 88 CUB) E INDICADORES KRI
+// ============================================================================
+
+model RAFThreshold {
+  id                  String       @id @default(cuid())
+  metricCode          String       @unique // ICAP, CET1, CCL, VAR_MKT, IMOR_PYME, PEA_OP
+  metricName          String
+  riskType            String
+  businessUnitId      String?
+  businessUnit        BusinessUnit? @relation(fields: [businessUnitId], references: [id])
+  unit                String       // "%", "MXN", "Días", "Veces"
+  direction           String       // "HIGHER_IS_WORSE", "LOWER_IS_WORSE"
+
+  appetiteValue       Float
+  toleranceValue      Float
+  regulatoryLimitValue Float
+  capacityValue       Float
+
+  currentValue        Float
+  currentZone         String       // GREEN, YELLOW, ORANGE, RED
+  kris                KRI[]
+  updatedAt           DateTime     @updatedAt
+}
+
+model KRI {
+  id                  String          @id @default(cuid())
+  code                String          @unique
+  name                String
+  description         String
+  periodicity         String          // "DIARIO", "SEMANAL", "MENSUAL", "TRIMESTRAL"
+  isImplemented       Boolean         @default(true)
+  riskEventId         String
+  riskEvent           RiskEvent       @relation(fields: [riskEventId], references: [id])
+  rafThresholdId      String?
+  rafThreshold        RAFThreshold?   @relation(fields: [rafThresholdId], references: [id])
+  ownerId             String
+  owner               User            @relation(fields: [ownerId], references: [id])
+  greenMax            Float
+  yellowMax           Float
+  orangeMax           Float
+  currentValue        Float
+  currentZone         String          @default("GREEN")
+  measurements        KRIMeasurement[]
+}
+
+model KRIMeasurement {
+  id                  String   @id @default(cuid())
+  kriId               String
+  kri                 KRI      @relation(fields: [kriId], references: [id], onDelete: Cascade)
+  measuredAt          DateTime @default(now())
+  value               Float
+  zone                String   // GREEN, YELLOW, ORANGE, RED
+  triggeredAlert      Boolean  @default(false)
+}
+
+// ============================================================================
+// 7. MOTORES CUANTITATIVOS FINANCIEROS (CRÉDITO NIF C-16, MERCADO, LIQUIDEZ, IN)
+// ============================================================================
+
+model CreditExposureNifC16 {
+  id                  String   @id @default(cuid())
+  periodDate          DateTime
+  loanId              String
+  commonRiskGroupId   String?
+  portfolioSegment    String   // EMPRESARIAL, PYME, AGROPECUARIO, CONSUMO, VIVIENDA
+  economicSectorSHCP  String?
+  daysPastDue         Int
+  hasQualitativeSICR  Boolean  @default(false)
+  nifStage            Int      // 1, 2, 3
+
+  grossExposureEI     Float
+  collateralValueC    Float    @default(0.0)
+  haircutExposureHe   Float    @default(0.0)
+  haircutCollateralHc Float    @default(0.0)
+  haircutFxHfx        Float    @default(0.0)
+  adjustedExposureE   Float
+  pd12Months          Float
+  pdLifetime          Float
+  lgdSeveritySP       Float
+  effectiveRate       Float
+  remainingTermYears  Float
+  expectedCreditLossPCE Float
+  rwaAPRC             Float
+  esgClimateScore     Float?
+}
+
+model OperationalBusinessIndicator {
+  id                  String   @id @default(cuid())
+  calculationYear     Int      @unique
+  ilctComponentMXN    Float
+  csComponentMXN      Float
+  fcComponentMXN      Float
+  totalBusinessIndIN  Float
+  regulatoryCapitalOP Float
+  rawAccountingJson   String   // JSON stringified breakdown
+  createdAt           DateTime @default(now())
+}
+
+model LossEvent {
+  id                  String       @id @default(cuid())
+  eventCode           String       @unique
+  riskEventId         String?
+  riskEvent           RiskEvent?   @relation(fields: [riskEventId], references: [id])
+  occurrenceDate      DateTime
+  discoveryDate       DateTime
+  accountingDate      DateTime
+  grossLossMXN        Float
+  recoveryAmountMXN   Float        @default(0.0)
+  netLossMXN          Float
+  channelAffected     String?
+  downtimeMinutes     Int?
+  accountingAccount   String
+}
+
+model LegalPortfolioCase {
+  id                  String   @id @default(cuid())
+  caseNumber          String   @unique
+  legalType           String
+  claimedAmountMXN    Float
+  adverseProbPct      Float
+  provisionedAmountMXN Float
+  status              String
+  updatedAt           DateTime @updatedAt
+}
+
+// ============================================================================
+// 8. HISTÓRICO, INGESTA DE LAYOUTS Y BITÁCORA DE AUDITORÍA INALTERABLE
+// ============================================================================
+
+model FinancialLayoutUpload {
+  id                  String       @id @default(cuid())
+  layoutType          String
+  fileName            String
+  businessUnitId      String
+  businessUnit        BusinessUnit @relation(fields: [businessUnitId], references: [id])
+  totalRows           Int
+  validRows           Int
+  errorRows           Int
+  validationReport    String       // JSON stringified report
+  status              String       // PRE_LOAD, VALIDATED, PUBLISHED
+  createdAt           DateTime     @default(now())
+}
+
+model RiskMatrixSnapshot {
+  id                  String    @id @default(cuid())
+  snapshotPeriod      String
+  riskEventId         String
+  riskEvent           RiskEvent @relation(fields: [riskEventId], references: [id], onDelete: Cascade)
+  inherentScore       Float
+  residualScore       Float
+  peaMXN              Float
+  pmaMXN              Float
+  zone                String
+  createdAt           DateTime  @default(now())
+}
+
+model AuditLog {
+  id                  String   @id @default(cuid())
+  timestamp           DateTime @default(now())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  userRole            String
+  actionType          String
+  entityName          String
+  entityId            String
+  previousStateJson   String?  // JSON string
+  newStateJson        String?  // JSON string
+  ipAddress           String?
+  previousHash        String
+  currentHash         String   @unique
+}

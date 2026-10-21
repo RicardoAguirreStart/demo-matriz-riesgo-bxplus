@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bx-lime: #C0D725;
+  --bx-cyan: #3299A8;
+  --bx-slate-dark: #1F242B;
+  --bx-surface: #F5F7F9;
+  --raf-green: #10B981;
+  --raf-yellow: #F59E0B;
+  --raf-orange: #F97316;
+  --raf-red: #EF4444;
+}
+
+body {
+  background-color: var(--bx-surface);
+  color: var(--bx-slate-dark);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-arvo {
+  font-family: var(--font-arvo), serif;
+}
+
+/* Custom Scrollbar for banking tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* React Flow custom styling */
+.react-flow__node {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+.react-flow__node:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+.react-flow__edge-path {
+  stroke: #3299A8 !important;
+  stroke-width: 2 !important;
+}

@@ -32,15 +32,15 @@ export function formatNumber(value: number | null | undefined, decimals: number 
 export function getZoneBadgeClasses(zone: RAFZone | string): string {
   switch (zone) {
     case "GREEN":
-      return "bg-emerald-100 text-emerald-800 border-emerald-300";
+      return "bg-emerald-50 text-emerald-900 border border-emerald-300/80 font-mono text-[10px] font-semibold tracking-wide uppercase shadow-xs";
     case "YELLOW":
-      return "bg-amber-100 text-amber-800 border-amber-300";
+      return "bg-amber-50 text-amber-950 border border-amber-300/80 font-mono text-[10px] font-semibold tracking-wide uppercase shadow-xs";
     case "ORANGE":
-      return "bg-orange-100 text-orange-800 border-orange-300";
+      return "bg-orange-50 text-orange-950 border border-orange-300/80 font-mono text-[10px] font-semibold tracking-wide uppercase shadow-xs";
     case "RED":
-      return "bg-rose-100 text-rose-800 border-rose-300";
+      return "bg-rose-50 text-rose-950 border border-rose-300/80 font-mono text-[10px] font-semibold tracking-wide uppercase shadow-xs";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-300";
+      return "bg-slate-50 text-slate-800 border border-slate-300/80 font-mono text-[10px] font-semibold tracking-wide uppercase shadow-xs";
   }
 }
 

@@ -5,20 +5,6 @@ import React from "react";
 import { BUSINESS_LINES_CONFIG, DEMO_ROLES } from "@/lib/constants";
 import { BusinessLineBancoBx, RoleType } from "@/types";
 import { CustomSelect } from "@/components/ui/CustomSelect";
-import {
-  Sparkles,
-  Shield,
-  Building2,
-  LayoutDashboard,
-  GitFork,
-  Target,
-  ClipboardList,
-  Zap,
-  UploadCloud,
-  FlaskConical,
-  FileText,
-  BookOpen,
-} from "lucide-react";
 
 interface HeaderProps {
   activeTab: string;
@@ -39,16 +25,17 @@ export function Header({
   setCurrentRole,
   onOpenCopilot,
 }: HeaderProps) {
+  // Orden exacto solicitado: Dashboard → Marco Teórico → Importador → Diagramador → Matriz Viva → Matriz 5x5 → Simulador → Planes & Quick-Wins → Reportes & Audit Trail
   const navTabs = [
-    { id: "dashboard", label: "Dashboard C-Level & RAF", icon: LayoutDashboard },
-    { id: "flowchart", label: "Diagramador de Procesos", icon: GitFork },
-    { id: "heatmap", label: "Matriz 5x5 CNBV", icon: Target },
-    { id: "risks", label: "Matriz Viva & Catálogo", icon: ClipboardList },
-    { id: "plans", label: "Planes & Quick-Wins", icon: Zap },
-    { id: "importer", label: "Importador Layouts", icon: UploadCloud },
-    { id: "copilot", label: "Simulador de Estrés", icon: FlaskConical },
-    { id: "reports", label: "Reportes & Audit Trail", icon: FileText },
-    { id: "methodology", label: "Marco Teórico & Metodología", icon: BookOpen },
+    { id: "dashboard", label: "Dashboard" },
+    { id: "methodology", label: "Marco Teórico" },
+    { id: "importer", label: "Importador" },
+    { id: "flowchart", label: "Diagramador" },
+    { id: "risks", label: "Matriz Viva" },
+    { id: "heatmap", label: "Matriz 5x5" },
+    { id: "copilot", label: "Simulador" },
+    { id: "plans", label: "Planes & Quick-Wins" },
+    { id: "reports", label: "Reportes & Audit Trail" },
   ];
 
   const businessLineOptions = BUSINESS_LINES_CONFIG.map((bl) => ({
@@ -89,59 +76,54 @@ export function Header({
           </div>
         </div>
 
-        {/* Global Selectors: Business Unit & Role Switcher using CustomSelect */}
+        {/* Global Selectors: Business Unit & Role Switcher using CustomSelect (sin iconos) */}
         <div className="flex items-center flex-wrap gap-2.5">
-          {/* Custom Business Line Selector */}
+          {/* Custom Business Line Selector sin icono */}
           <CustomSelect
             value={selectedBusinessLine}
             onChange={(val) => setSelectedBusinessLine(val as BusinessLineBancoBx)}
             options={businessLineOptions}
-            icon={<Building2 className="w-3.5 h-3.5 text-[#3299A8]" />}
             theme="dark"
             className="min-w-[210px]"
             dropdownClassName="w-[280px]"
           />
 
-          {/* Custom RBAC Role Switcher */}
+          {/* Custom RBAC Role Switcher sin icono */}
           <CustomSelect
             value={currentRole}
             onChange={(val) => setCurrentRole(val as RoleType)}
             options={roleOptions}
-            icon={<Shield className="w-3.5 h-3.5 text-emerald-400" />}
             theme="dark"
             className="min-w-[210px]"
             dropdownClassName="w-[300px]"
           />
 
-          {/* Insignia Button: Bx+ Risk Copilot */}
+          {/* Insignia Button: Bx+ Risk Copilot (sin icono) */}
           <button
             onClick={onOpenCopilot}
-            className="flex items-center space-x-1.5 bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-3.5 py-2 rounded-md shadow-sm transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-4 py-2 rounded-md shadow-sm transition-all transform hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Sparkles className="w-4 h-4 fill-[#1F242B]" />
-            <span>B×+ Risk Copilot</span>
+            B×+ Risk Copilot
           </button>
         </div>
       </div>
 
-      {/* Navigation Sub-Header Tabs - Full Width */}
+      {/* Navigation Sub-Header Tabs - Full Width (sin iconos) */}
       <div className="bg-[#171B20] px-4 sm:px-6 lg:px-8 border-t border-gray-800/80 w-full">
         <div className="w-full flex space-x-1 overflow-x-auto py-1 scrollbar-none">
           {navTabs.map((tab) => {
             const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap px-3.5 py-2 text-xs font-semibold rounded-t-md transition-all flex items-center space-x-1.5 border-b-2 ${
+                className={`whitespace-nowrap px-4 py-2 text-xs font-semibold rounded-t-md transition-all border-b-2 ${
                   isActive
                     ? "border-[#C0D725] text-[#C0D725] bg-[#21262E]"
                     : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#1E232B]"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#C0D725]" : "text-gray-400"}`} />
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             );
           })}

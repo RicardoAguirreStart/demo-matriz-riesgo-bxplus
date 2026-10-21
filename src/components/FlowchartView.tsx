@@ -643,7 +643,7 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
             <AlertTriangle className={`w-3.5 h-3.5 ${sodAuditActive ? "text-rose-600" : "text-gray-500"}`} />
             <span>Auditoría SoD (CUB)</span>
             {sodViolationsCount > 0 && (
-              <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.2 rounded-full font-mono">
+              <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.2 rounded-[3px] font-mono font-semibold">
                 {sodViolationsCount}
               </span>
             )}

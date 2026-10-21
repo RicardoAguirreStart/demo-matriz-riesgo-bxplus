@@ -244,14 +244,14 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
               <div className="flex items-center justify-between text-[11px] font-bold">
                 <span className="truncate">{info.name.split(" ")[0]}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isSelected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                  className={`text-[10px] px-2 py-0.5 rounded-[3px] font-mono font-semibold ${
+                    isSelected ? "bg-[#C0D725] text-[#1F242B]" : "bg-gray-100 text-gray-700 border border-gray-200"
                   }`}
                 >
                   {count}
                 </span>
               </div>
-              <div className={`text-[10px] truncate mt-1 ${isSelected ? "text-gray-300" : "text-gray-500"}`}>
+              <div className={`text-[10px] truncate mt-1 ${isSelected ? "text-[#C0D725] font-mono" : "text-[#3299A8] font-mono font-medium"}`}>
                 {info.badge}
               </div>
             </div>
@@ -341,11 +341,22 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(
+                        className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
                           r.residualZone
                         )}`}
                       >
-                        {r.residualScore} ({r.residualZone})
+                        <span
+                          className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+                            r.residualZone === "GREEN"
+                              ? "bg-emerald-600"
+                              : r.residualZone === "YELLOW"
+                              ? "bg-amber-500"
+                              : r.residualZone === "ORANGE"
+                              ? "bg-orange-600"
+                              : "bg-rose-600"
+                          }`}
+                        />
+                        <span>{r.residualScore} ({r.residualZone})</span>
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right font-bold font-mono text-orange-700">
@@ -357,9 +368,9 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                     <td className="py-3 px-4 text-center">
                       {isUnderReview ? (
                         <div className="flex flex-col items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            <AlertTriangle className="w-3 h-3 text-amber-600" />
-                            En Revisión UAIR (1ª Línea)
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-900 bg-amber-50/90 px-2 py-0.5 rounded-[3px] border border-amber-300 shadow-xs">
+                            <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>En Revisión UAIR (1ª Línea)</span>
                           </span>
                           {canApprove && (
                             <button
@@ -378,9 +389,9 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
                           )}
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          Publicado (Matriz Viva)
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-emerald-900 bg-emerald-50/90 px-2 py-0.5 rounded-[3px] border border-emerald-300 shadow-xs">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span>Publicado (Matriz Viva)</span>
                         </span>
                       )}
                     </td>

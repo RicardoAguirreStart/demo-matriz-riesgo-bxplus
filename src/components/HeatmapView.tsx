@@ -84,10 +84,10 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
           </h2>
           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
             <span className="font-medium text-gray-600">Semaforización CUB:</span>
-            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" /> Verde (1-4)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm" /> Amarillo (5-9)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block shadow-sm" /> Naranja (10-15)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" /> Rojo (16-25)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500 inline-block shadow-xs" /> Verde (1-4)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-amber-400 inline-block shadow-xs" /> Amarillo (5-9)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-orange-500 inline-block shadow-xs" /> Naranja (10-15)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-rose-500 inline-block shadow-xs" /> Rojo (16-25)</span>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
                         {/* Cell Content: Risk Count Badge */}
                         <div className="text-center">
                           {cellRisks.length > 0 ? (
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-black bg-white shadow-sm border border-black/10">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-[3px] text-xs font-mono font-bold bg-white/95 text-[#1F242B] shadow-xs border border-black/15">
                               {cellRisks.length}{" "}
                               <span className="text-[10px] font-normal ml-1">
                                 {cellRisks.length === 1 ? "riesgo" : "riesgos"}

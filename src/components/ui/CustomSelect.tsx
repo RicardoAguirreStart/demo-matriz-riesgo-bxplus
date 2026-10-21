@@ -126,8 +126,10 @@ export function CustomSelect({
                 <div className="flex items-center gap-1 shrink-0">
                   {opt.badge && (
                     <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                        isDark ? "bg-[#171B20] text-gray-400" : "bg-gray-200 text-gray-700"
+                      className={`text-[9px] px-1.5 py-0.5 rounded-[3px] font-mono font-semibold tracking-wider uppercase border ${
+                        isDark
+                          ? "bg-[#14181D] text-[#C0D725] border-gray-700/80"
+                          : "bg-slate-100 text-[#3299A8] border-slate-200"
                       }`}
                     >
                       {opt.badge}

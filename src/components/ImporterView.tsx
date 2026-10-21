@@ -325,8 +325,8 @@ CR-PYME-105,PYME,6000000,5000000,0.05,0.15,0,0.020,0.40,20`,
             Compatible con plantillas oficiales de Banco B×+ (hasta 15MB)
           </p>
           {fileNameLoaded && (
-            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium px-3 py-1 rounded-full">
-              <FileText className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-50/90 border border-emerald-300 text-emerald-900 text-xs font-mono font-medium px-3 py-1 rounded-[4px] shadow-xs">
+              <FileText className="w-3.5 h-3.5 text-emerald-700" />
               <span>Archivo cargado: <strong>{fileNameLoaded}</strong> ({previewRows.length} registros leídos)</span>
             </div>
           )}

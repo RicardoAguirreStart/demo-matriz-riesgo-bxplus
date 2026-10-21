@@ -279,8 +279,19 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
                     {th.unit === "%" ? `${th.currentValue}%` : formatMXN(th.currentValue)}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(th.currentZone)}`}>
-                      {th.currentZone}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(th.currentZone)}`}>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+                          th.currentZone === "GREEN"
+                            ? "bg-emerald-600"
+                            : th.currentZone === "YELLOW"
+                            ? "bg-amber-500"
+                            : th.currentZone === "ORANGE"
+                            ? "bg-orange-600"
+                            : "bg-rose-600"
+                        }`}
+                      />
+                      <span>{th.currentZone}</span>
                     </span>
                   </td>
                 </tr>

@@ -132,17 +132,30 @@ export function DashboardView({
                     {th.metricCode}
                   </span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(
+                    className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
                       th.currentZone
                     )}`}
                   >
-                    {th.currentZone === "GREEN"
-                      ? "DENTRO DE APETITO"
-                      : th.currentZone === "YELLOW"
-                      ? "ATENCIÓN PREVENTIVA"
-                      : th.currentZone === "ORANGE"
-                      ? "EXCEDE TOLERANCIA"
-                      : "TRANSGRESIÓN LÍMITE"}
+                    <span
+                      className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+                        th.currentZone === "GREEN"
+                          ? "bg-emerald-600"
+                          : th.currentZone === "YELLOW"
+                          ? "bg-amber-500"
+                          : th.currentZone === "ORANGE"
+                          ? "bg-orange-600"
+                          : "bg-rose-600"
+                      }`}
+                    />
+                    <span>
+                      {th.currentZone === "GREEN"
+                        ? "DENTRO DE APETITO"
+                        : th.currentZone === "YELLOW"
+                        ? "ATENCIÓN PREVENTIVA"
+                        : th.currentZone === "ORANGE"
+                        ? "EXCEDE TOLERANCIA"
+                        : "TRANSGRESIÓN LÍMITE"}
+                    </span>
                   </span>
                 </div>
 
@@ -448,17 +461,28 @@ export function DashboardView({
                     {formatMXN(r.rawRisk?.expectedAnnualLossPEA)}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[3px] bg-slate-100 text-slate-800 border border-slate-200 uppercase tracking-wide">
                       Nivel {r.reputationalImpactLevel}/5
                     </span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getZoneBadgeClasses(
+                      className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
                         r.residualZone
                       )}`}
                     >
-                      {r.residualZone}
+                      <span
+                        className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+                          r.residualZone === "GREEN"
+                            ? "bg-emerald-600"
+                            : r.residualZone === "YELLOW"
+                            ? "bg-amber-500"
+                            : r.residualZone === "ORANGE"
+                            ? "bg-orange-600"
+                            : "bg-rose-600"
+                        }`}
+                      />
+                      <span>{r.residualZone}</span>
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">

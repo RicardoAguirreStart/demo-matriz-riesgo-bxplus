@@ -507,7 +507,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
                         {item.regulatoryBase}
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-[#3299A8] border border-cyan-200">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[3px] bg-cyan-50 text-[#3299A8] border border-cyan-200 uppercase tracking-wide">
                         {liveCount} en Matriz Viva
                       </span>
                     </div>

@@ -233,7 +233,7 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className="text-xs font-bold bg-[#C0D725] text-[#1F242B] px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
+          <span className="text-xs font-mono font-bold bg-[#C0D725] text-[#1F242B] px-3 py-1.5 rounded-[4px] border border-[#AEC41D] flex items-center gap-1.5 shadow-xs uppercase tracking-wide">
             <Zap className="w-3.5 h-3.5 fill-[#1F242B]" />
             <span>{quickWins.length} Quick-Wins Identificados</span>
           </span>
@@ -580,7 +580,7 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                     Previsualización del Beneficio Cuantitativo:
                   </span>
                   {liveIsQuickWin ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-900 bg-emerald-100/90 px-2.5 py-0.5 rounded-[3px] border border-emerald-300 uppercase tracking-wide">
                       <Zap className="w-3 h-3 fill-emerald-600" />
                       Califica como Quick-Win (&star;)
                     </span>

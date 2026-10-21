@@ -313,10 +313,13 @@ RESULTADOS CUANTITATIVOS DEL ESTRÉS:
 EVENTOS DE RIESGO MÁS CRÍTICOS EN LOS NODOS DEL DIAGRAMA:
 ${criticalRisksList || "Sin riesgos individuales en cuadrantes críticos."}
 
-Escribe un dictamen formal, técnico y conciso en exactamente 3 secciones:
-1. DIAGNÓSTICO DE VULNERABILIDAD EN LOS PROCESOS: Explica los nodos y pasos del flujo más vulnerables al estrés y la degradación de controles.
-2. IMPACTO EN EL MARCO RAF Y SOLVENCIA (ICAP & NIF C-16): Analiza si se vulnera la Tolerancia o Capacidad del banco conforme a CUB Art. 88.
-3. ACCIONES DE MITIGACIÓN Y PLANES DE CONTINGENCIA INMEDIATOS: Medidas de gobernanza (3 Líneas de Defensa), controles duales o coberturas que deben implementarse antes de 15 días.`;
+PAUTAS DE REDACCIÓN EJECUTIVA PARA PRESENTACIÓN A CLIENTE Y CONSEJO:
+Escribe un dictamen institucional riguroso, formal y de alto nivel en exactamente 3 secciones numeradas:
+1. DIAGNÓSTICO DE VULNERABILIDAD EN LOS PROCESOS B×+: Explica los nodos y pasos del flujo más vulnerables al estrés y la degradación de controles.
+2. IMPACTO EN EL MARCO RAF (CUB ART. 88) Y SOLVENCIA: Analiza la solvencia (ICAP), reservas NIF C-16 y si se vulnera la Tolerancia o Capacidad del banco conforme a CUB Art. 88.
+3. ACCIONES DE MITIGACIÓN Y PLANES DE CONTINGENCIA INMEDIATOS: Medidas de gobernanza (3 Líneas de Defensa), controles duales o coberturas que deben implementarse antes de 15 días.
+
+Usa tono de alta dirección bancaria. No agregues preámbulos informales ni firmas ficticias al final.`;
 
     let aiNarrative = "";
     try {

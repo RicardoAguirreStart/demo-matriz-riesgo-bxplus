@@ -1027,12 +1027,10 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
 
                                 {/* 2. Proceso & Nodo del Diagrama */}
                                 <td className="py-2.5 px-3 align-top min-w-[190px]">
-                                  <div className="flex items-center gap-1 font-mono text-[10px] text-gray-500 font-bold">
-                                    <Building2 className="w-3 h-3 text-[#3299A8]" />
+                                  <div className="font-mono text-[10px] text-gray-500 font-bold">
                                     <span>{r.processCode}</span>
                                   </div>
-                                  <div className="text-gray-800 font-medium text-xs mt-0.5 flex items-center gap-1">
-                                    <Workflow className="w-3 h-3 text-indigo-600 shrink-0" />
+                                  <div className="text-gray-800 font-medium text-xs mt-0.5">
                                     <span className="line-clamp-2" title={r.processNodeLabel}>
                                       {r.processNodeLabel}
                                     </span>
@@ -1125,21 +1123,96 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     </div>
                   </div>
 
-                  {/* CAPA 4: DICTAMEN EJECUTIVO DE GEMINI PARA EL CAIR */}
-                  <div className="bg-white rounded-bx p-5 shadow-card border border-emerald-300 space-y-2.5">
-                    <div className="flex items-center justify-between pb-1 border-b border-emerald-100">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-emerald-600" />
-                        <h3 className="font-bold text-gray-900 text-sm font-serif">
-                          Dictamen Oficial B×+ Risk Copilot para el CAIR (CUB Anexos 12-B / 12-D & NIF C-16)
-                        </h3>
+                  {/* CAPA 4: DICTAMEN EJECUTIVO PARA EL CAIR (PRESENTACIÓN AL CLIENTE / CONSEJO) */}
+                  <div className="bg-white rounded-bx p-6 shadow-card border border-emerald-300 space-y-4">
+                    {/* Header Institucional */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-emerald-100 gap-2">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#3299A8] bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                            Banco Ve por Más, S.A. &bull; UAIR
+                          </span>
+                          <span className="text-[10px] font-mono text-gray-500 font-semibold">
+                            Exp. CAIR-ST-2026
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+                          <h3 className="font-bold text-gray-900 text-base font-serif">
+                            Dictamen Oficial B×+ Risk Copilot para el CAIR (CUB Anexos 12-B / 12-D & NIF C-16)
+                          </h3>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-sans">
+                          Resolución Técnica Regulatoria conforme al Marco de Apetito al Riesgo (RAF), CUB Art. 88 y Nuevas Reservas Crediticias NIF C-16
+                        </p>
                       </div>
-                      <span className="text-[10px] font-mono bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded font-bold">
-                        Resolución Automatizada IA
-                      </span>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-full border shadow-2xs ${
+                            simResult.metrics.icapZone === "RED"
+                              ? "bg-rose-100 text-rose-800 border-rose-300"
+                              : simResult.metrics.icapZone === "ORANGE"
+                              ? "bg-amber-100 text-amber-800 border-amber-300"
+                              : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          }`}
+                        >
+                          RAF: {simResult.metrics.icapZone === "RED" ? "Capacidad Vulnerada" : simResult.metrics.icapZone === "ORANGE" ? "Tolerancia Prudencial" : "Apetito Estable"}
+                        </span>
+                        <span className="text-[10px] font-mono bg-gray-100 text-gray-700 px-2.5 py-1 rounded border border-gray-200 font-bold">
+                          Resolución IA Oficial
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-line bg-[#F8FAF8] p-4 rounded-lg border border-emerald-100 font-sans space-y-2">
-                      {simResult.aiNarrative}
+
+                    {/* Ficha Resumen de Parámetros del Dictamen */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-100 text-xs">
+                      <div>
+                        <div className="text-[10px] text-gray-500 font-medium">Órgano de Gobierno:</div>
+                        <div className="font-bold text-gray-800 text-[11px]">Comité CAIR & Consejo B×+</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500 font-medium">Alcance Evaluado:</div>
+                        <div className="font-bold text-gray-800 text-[11px] truncate" title={simResult.simulationParams?.processName || "Portafolio Consolidado"}>
+                          {simResult.simulationParams?.processName || "Portafolio Consolidado"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500 font-medium">ICAP Base &rarr; Estresado:</div>
+                        <div className="font-bold text-gray-800 text-[11px] font-mono">
+                          {simResult.metrics.baseICAP}% &rarr; {simResult.metrics.stressedICAP}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500 font-medium">&Delta;PEA / NIF C-16:</div>
+                        <div className="font-bold text-emerald-800 text-[11px] font-mono">
+                          +{formatMXN(simResult.metrics.totalDeltaPEA)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contenido del Dictamen Renderizado en Formato Ejecutivo */}
+                    <div className="bg-[#FAFBF9] p-5 rounded-lg border border-emerald-200/80 shadow-2xs font-sans">
+                      <MarkdownRenderer content={simResult.aiNarrative} className="text-xs text-gray-800 leading-relaxed" />
+                    </div>
+
+                    {/* Bloque de Respaldo y Firmas Regulatorias */}
+                    <div className="pt-3 border-t border-emerald-100 grid grid-cols-1 md:grid-cols-3 gap-3 text-center text-[10px] text-gray-600">
+                      <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
+                        <div className="font-semibold text-gray-800">Titular de la UAIR</div>
+                        <div className="text-gray-500 mt-0.5">2ª Línea de Defensa &bull; Banco B×+</div>
+                        <div className="text-[9px] font-mono text-emerald-700 mt-1 font-bold">&check; Dictamen Suscrito</div>
+                      </div>
+                      <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
+                        <div className="font-semibold text-gray-800">Secretaría Técnica del CAIR</div>
+                        <div className="text-gray-500 mt-0.5">Comité de Riesgos CUB Art. 65</div>
+                        <div className="text-[9px] font-mono text-emerald-700 mt-1 font-bold">&check; Sesión Notificada</div>
+                      </div>
+                      <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
+                        <div className="font-semibold text-gray-800">B×+ Risk Copilot Engine</div>
+                        <div className="text-gray-500 mt-0.5">Google Gemini 2.5 &bull; CUB 12-B/12-D</div>
+                        <div className="text-[9px] font-mono text-gray-400 mt-1">Hash SHA-256 Validado</div>
+                      </div>
                     </div>
                   </div>
                 </>

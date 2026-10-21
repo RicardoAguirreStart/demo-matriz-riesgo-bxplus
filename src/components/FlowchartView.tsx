@@ -137,7 +137,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
     const isEnd = config.stage === "END" || label?.toLowerCase().includes("fin") || label?.toLowerCase().includes("cierre") || label?.toLowerCase().includes("termina");
     return (
       <div
-        className={`relative w-[280px] rounded-full border-2 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/90 shadow-md p-3.5 transition-all text-xs flex flex-col items-center justify-center text-center ${
+        className={`relative w-[280px] rounded-full border-2 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/90 shadow-md p-3.5 transition-colors text-xs flex flex-col items-center justify-center text-center ${
           isSelected ? "ring-2 ring-[#C0D725] shadow-lg border-[#C0D725]" : isSodAlert ? "border-rose-600" : "border-emerald-500"
         }`}
       >
@@ -167,7 +167,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
   // ==========================================================================
   if (nodeType === "DECISION_GATEWAY") {
     return (
-      <div className="relative w-[310px] h-[250px] flex items-center justify-center transition-all select-none bg-transparent">
+      <div className="relative w-[310px] h-[250px] flex items-center justify-center select-none bg-transparent">
         {/* Silueta geométrica SVG Rombo */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 250">
           <polygon
@@ -216,7 +216,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
   // ==========================================================================
   if (nodeType === "CONTROL_POINT") {
     return (
-      <div className="relative w-[310px] h-[200px] flex items-center justify-center transition-all select-none bg-transparent">
+      <div className="relative w-[310px] h-[200px] flex items-center justify-center select-none bg-transparent">
         {/* Silueta geométrica SVG Hexágono */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 200">
           <polygon
@@ -263,7 +263,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
   // ==========================================================================
   if (nodeType === "FRAUD_CHECKPOINT") {
     return (
-      <div className="relative w-[300px] h-[215px] flex items-center justify-center transition-all select-none bg-transparent">
+      <div className="relative w-[300px] h-[215px] flex items-center justify-center select-none bg-transparent">
         {/* Silueta geométrica SVG Escudo */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 300 215">
           <path
@@ -310,7 +310,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
   // ==========================================================================
   if (nodeType === "EXTERNAL_SYSTEM") {
     return (
-      <div className="relative w-[310px] h-[200px] flex items-center justify-center transition-all select-none bg-transparent">
+      <div className="relative w-[310px] h-[200px] flex items-center justify-center select-none bg-transparent">
         {/* Silueta geométrica SVG Paralelogramo */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 310 200">
           <polygon
@@ -357,7 +357,7 @@ function BankingProcessNode({ id, data, selected }: NodeProps) {
   // ==========================================================================
   return (
     <div
-      className={`relative min-w-[270px] max-w-[290px] rounded-none border-2 bg-white shadow-md transition-all text-xs ${
+      className={`relative min-w-[270px] max-w-[290px] rounded-none border-2 bg-white shadow-md transition-colors text-xs ${
         isSelected
           ? "ring-2 ring-[#C0D725] shadow-lg border-[#C0D725]"
           : isSodAlert

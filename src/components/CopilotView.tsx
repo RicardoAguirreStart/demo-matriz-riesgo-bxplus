@@ -1,10 +1,11 @@
 // src/components/CopilotView.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { formatMXN, formatPct, getZoneBadgeClasses } from "@/lib/utils";
 import { RoleType } from "@/types";
 import { CustomSelect, CustomSelectOption } from "@/components/ui/CustomSelect";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import {
   Sparkles,
   Sliders,
@@ -70,6 +71,23 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-ajuste de altura del campo de escritura del chat
+  useEffect(() => {
+    if (chatTextareaRef.current) {
+      chatTextareaRef.current.style.height = "auto";
+      chatTextareaRef.current.style.height = `${Math.min(chatTextareaRef.current.scrollHeight, 130)}px`;
+    }
+  }, [inputMessage]);
+
+  // Auto-scroll al final del chat
+  useEffect(() => {
+    if (activeSubTab === "CHAT") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, chatLoading, activeSubTab]);
 
   // 1. Cargar lista de procesos
   useEffect(() => {
@@ -270,6 +288,9 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
     const newHistory = [...chatMessages, { sender: "user" as const, text }];
     setChatMessages(newHistory);
     setInputMessage("");
+    if (chatTextareaRef.current) {
+      chatTextareaRef.current.style.height = "auto";
+    }
     setChatLoading(true);
 
     try {
@@ -1161,7 +1182,11 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                       : "bg-white text-gray-800 rounded-tl-none border border-gray-200 shadow-sm"
                   }`}
                 >
-                  <div className="whitespace-pre-line">{msg.text}</div>
+                  {msg.sender === "copilot" ? (
+                    <MarkdownRenderer content={msg.text} />
+                  ) : (
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1170,12 +1195,13 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                 <div className="w-7 h-7 rounded-full bg-[#C0D725] text-[#1F242B] flex items-center justify-center text-xs font-bold animate-pulse">
                   IA
                 </div>
-                <div className="p-3 bg-white border border-gray-200 rounded-lg text-xs text-gray-500 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <div className="p-3 bg-white border border-gray-200 rounded-lg text-xs text-gray-500 flex items-center gap-2 shadow-xs">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
                   <span>B×+ Risk Copilot razonando sobre la CUB, NIF C-16 y procesos bancarios...</span>
                 </div>
               </div>
             )}
+            <div ref={chatEndRef} />
           </div>
 
           {/* Quick Prompts Bar */}
@@ -1189,28 +1215,35 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                 key={i}
                 type="button"
                 onClick={() => handleSendMessage(p)}
-                className="whitespace-nowrap bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 px-2.5 py-1 rounded font-medium transition-colors cursor-pointer"
+                className="whitespace-nowrap bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 px-2.5 py-1 rounded font-medium transition-colors cursor-pointer shrink-0"
               >
                 {p}
               </button>
             ))}
           </div>
 
-          {/* Chat Input Bar */}
-          <div className="p-3 bg-white border-t border-gray-200 flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Pregunta a B×+ Risk Copilot sobre límites RAF, NIF C-16, estrés por procesos o auditorías CNBV..."
+          {/* Chat Input Bar con Textarea Auto-ajustable */}
+          <div className="p-3 bg-white border-t border-gray-200 flex items-end gap-2">
+            <textarea
+              ref={chatTextareaRef}
+              rows={1}
+              placeholder="Pregunta a B×+ Risk Copilot sobre límites RAF, NIF C-16, estrés por procesos o auditorías CNBV... (Shift + Enter para nueva línea)"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              className="flex-1 p-2 border border-gray-300 rounded text-xs outline-none focus:border-[#3299A8]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              className="flex-1 p-2 border border-gray-300 rounded text-xs outline-none focus:border-[#3299A8] resize-none min-h-[38px] max-h-[130px] leading-relaxed transition-all"
             />
             <button
               type="button"
               onClick={() => handleSendMessage()}
-              disabled={chatLoading}
-              className="bg-[#1F242B] hover:bg-[#2A313C] text-white p-2 rounded text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
+              disabled={chatLoading || !inputMessage.trim()}
+              className="bg-[#1F242B] hover:bg-[#2A313C] text-white p-2.5 rounded text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer shrink-0 h-[38px] flex items-center justify-center"
+              title="Enviar consulta"
             >
               <Send className="w-4 h-4" />
             </button>

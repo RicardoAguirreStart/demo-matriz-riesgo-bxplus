@@ -285,16 +285,6 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               className="min-w-[280px] max-w-[420px]"
               dropdownClassName="w-[420px]"
             />
-            {currentProcess?.code && (
-              <span className="font-mono text-xs font-bold px-2.5 py-1 rounded bg-gray-100 text-gray-800 border border-gray-200">
-                {currentProcess.code}
-              </span>
-            )}
-            {currentProcess?.macroProcess?.name && (
-              <span className="text-xs font-semibold text-[#3299A8] bg-[#3299A8]/10 px-2.5 py-1 rounded border border-[#3299A8]/20">
-                {currentProcess.macroProcess.name}
-              </span>
-            )}
           </div>
 
           {/* Métricas Agregadas del Proceso */}

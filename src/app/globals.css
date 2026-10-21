@@ -43,7 +43,7 @@ html, body {
   -ms-overflow-style: none !important;
 }
 
-/* React Flow custom styling - Contenedores transparentes sin recuadro rectangular */
+/* React Flow custom styling - Contenedores transparentes sin recuadro rectangular y arrastre suave */
 .react-flow__node,
 .react-flow__node-bankingNode {
   background: transparent !important;
@@ -51,7 +51,12 @@ html, body {
   border-radius: 0 !important;
   box-shadow: none !important;
   border: none !important;
-  transition: all 0.2s ease;
+  transition: none !important;
+}
+.react-flow__node.dragging,
+.react-flow__node-bankingNode.dragging {
+  transition: none !important;
+  cursor: grabbing !important;
 }
 .react-flow__node:hover,
 .react-flow__node-bankingNode:hover {

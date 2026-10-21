@@ -1,9 +1,10 @@
 // src/components/CopilotModal.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { RoleType } from "@/types";
-import { Sparkles, X, Send, BrainCircuit, ShieldAlert } from "lucide-react";
+import { X, Send } from "lucide-react";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 interface CopilotModalProps {
   isOpen: boolean;
@@ -20,6 +21,23 @@ export function CopilotModal({ isOpen, onClose, currentRole }: CopilotModalProps
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-ajuste de altura del campo de escritura
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 130)}px`;
+    }
+  }, [input]);
+
+  // Auto-scroll al final del chat al recibir mensajes
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, loading, isOpen]);
 
   if (!isOpen) return null;
 
@@ -30,6 +48,9 @@ export function CopilotModal({ isOpen, onClose, currentRole }: CopilotModalProps
     const newMsgs = [...messages, { sender: "user" as const, text }];
     setMessages(newMsgs);
     setInput("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     setLoading(true);
 
     try {
@@ -66,24 +87,19 @@ export function CopilotModal({ isOpen, onClose, currentRole }: CopilotModalProps
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full h-[650px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-200">
-        {/* Header */}
+        {/* Header - Sin icono previo, tipografía institucional limpia */}
         <div className="bg-[#1F242B] text-white p-4 flex items-center justify-between border-b border-gray-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-md bg-[#C0D725] text-[#1F242B]">
-              <Sparkles className="w-5 h-5 fill-[#1F242B]" />
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-[#C0D725] uppercase font-bold tracking-wider">
+                Gemini 2.5 Pro Grounded RAG
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono text-[#C0D725] uppercase font-bold tracking-wider">
-                  Gemini 2.5 Pro Grounded RAG
-                </span>
-              </div>
-              <h3 className="text-sm font-bold text-white font-serif">
-                B×+ Risk Copilot — Asistente Cuantitativo
-              </h3>
-            </div>
+            <h3 className="text-sm font-bold text-white font-serif">
+              B×+ Risk Copilot — Asistente Cuantitativo
+            </h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 cursor-pointer transition-colors" title="Cerrar asistente">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -109,20 +125,25 @@ export function CopilotModal({ isOpen, onClose, currentRole }: CopilotModalProps
               <div
                 className={`p-3 rounded-lg text-xs leading-relaxed ${
                   m.sender === "user"
-                    ? "bg-[#1F242B] text-white rounded-tr-none"
-                    : "bg-white text-gray-800 rounded-tl-none border border-gray-200 shadow-sm"
+                    ? "bg-[#1F242B] text-white rounded-tr-none shadow-xs"
+                    : "bg-white text-gray-800 rounded-tl-none border border-gray-200 shadow-xs"
                 }`}
               >
-                <div className="whitespace-pre-line">{m.text}</div>
+                {m.sender === "copilot" ? (
+                  <MarkdownRenderer content={m.text} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{m.text}</div>
+                )}
               </div>
             </div>
           ))}
           {loading && (
-            <div className="flex gap-2 text-xs text-gray-500 items-center p-2 bg-white rounded border max-w-sm">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <div className="flex gap-2 text-xs text-gray-500 items-center p-2.5 bg-white rounded border border-gray-200 max-w-sm shadow-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
               <span>Consultando contexto normativo y cuantitativo B×+...</span>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Suggestions Bar */}
@@ -130,28 +151,37 @@ export function CopilotModal({ isOpen, onClose, currentRole }: CopilotModalProps
           {suggestions.map((s, idx) => (
             <button
               key={idx}
+              type="button"
               onClick={() => handleSend(s)}
-              className="whitespace-nowrap bg-white hover:bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-300 font-medium"
+              className="whitespace-nowrap bg-white hover:bg-gray-100 text-gray-700 px-2.5 py-1 rounded border border-gray-300 font-medium cursor-pointer transition-colors shrink-0"
             >
               {s}
             </button>
           ))}
         </div>
 
-        {/* Input */}
-        <div className="p-3 bg-white border-t border-gray-200 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Escribe tu consulta sobre riesgos, RAF o NIF C-16..."
+        {/* Input Bar con Textarea Auto-ajustable */}
+        <div className="p-3 bg-white border-t border-gray-200 flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            placeholder="Escribe tu consulta sobre riesgos, RAF o NIF C-16... (Shift + Enter para nueva línea)"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className="flex-1 p-2 border border-gray-300 rounded text-xs outline-none focus:border-[#3299A8]"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="flex-1 p-2 border border-gray-300 rounded text-xs outline-none focus:border-[#3299A8] resize-none min-h-[38px] max-h-[130px] leading-relaxed transition-all"
           />
           <button
+            type="button"
             onClick={() => handleSend()}
-            disabled={loading}
-            className="bg-[#1F242B] hover:bg-[#2A313C] text-white p-2 rounded text-xs font-bold transition-colors disabled:opacity-50"
+            disabled={loading || !input.trim()}
+            className="bg-[#1F242B] hover:bg-[#2A313C] text-white p-2.5 rounded text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer shrink-0 h-[38px] flex items-center justify-center"
+            title="Enviar mensaje"
           >
             <Send className="w-4 h-4" />
           </button>

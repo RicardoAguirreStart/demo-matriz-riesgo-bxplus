@@ -25,16 +25,16 @@ export function Header({
   setCurrentRole,
   onOpenCopilot,
 }: HeaderProps) {
-  // Orden exacto solicitado: Dashboard → Marco Teórico → Importador → Diagramador → Matriz Viva → Matriz 5x5 → Simulador → Planes & Quick-Wins → Reportes & Audit Trail
+  // Orden exacto solicitado: Dashboard → Marco Teórico → Diagramador → Matriz Viva → Matriz 5x5 → Simulador → Planes & Quick-Wins → Importador → Reportes & Audit Trail
   const navTabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "methodology", label: "Marco Teórico" },
-    { id: "importer", label: "Importador" },
     { id: "flowchart", label: "Diagramador" },
     { id: "risks", label: "Matriz Viva" },
     { id: "heatmap", label: "Matriz 5x5" },
     { id: "copilot", label: "Simulador" },
     { id: "plans", label: "Planes & Quick-Wins" },
+    { id: "importer", label: "Importador" },
     { id: "reports", label: "Reportes & Audit Trail" },
   ];
 

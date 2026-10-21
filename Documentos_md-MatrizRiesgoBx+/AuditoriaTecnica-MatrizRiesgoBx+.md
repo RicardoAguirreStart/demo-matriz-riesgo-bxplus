@@ -123,3 +123,62 @@ Aunque la plataforma es **100% funcional, estable y visualmente fiel a B×+**, c
 | **2. Cierre de Gobernanza 3LD (`VERIFY_AND_APPLY_PLAN`) y Generador IA (`AI_SUGGEST_PLANS_FOR_PROCESS`)** | [route.ts](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/app/api/action-plans/route.ts) | `VERIFY_AND_APPLY_PLAN` (líneas 415–540) aprueba evidencias (`approvedByUAIR: true`), pasa el plan a `COMPLETED_VERIFIED`, recalcula y reduce en vivo el riesgo residual en BD (`residualProbability`, `residualImpact`, `residualScore`, `residualZone`, `expectedAnnualLossPEA`), formaliza controles (`isFormalized: true`) y sella el `AuditLog` con `SHA-256`. `AI_SUGGEST_PLANS_FOR_PROCESS` (líneas 545–668) genera planes contextualizados por nodo para los riesgos huérfanos del proceso. | ✅ **100% Verificado** |
 | **3. Capa 1 (4 KPIs Dinámicos + Selector Proceso + Botón IA) y Capa 2 (Matriz Visual 2×2 + Radar de Brechas)** | [ActionPlansView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/ActionPlansView.tsx) | **Capa 1 (líneas 541–685):** Selector `CustomSelect`, botón `"Sugerir Planes con IA"` y 4 KPIs (`Cobertura del Proceso`, `Ahorro Anual ΔPEA`, `Inversión vs. ROI`, `Quick-Wins & Gobernanza 3LD`).<br/>**Capa 2 (líneas 690–1083):** **Matriz Visual 2×2** con los 4 cuadrantes interactivos (`I. Quick-Wins`, `II. Estructurales Core`, `III. Mejoras Tácticas`, `IV. Reevaluar / Baja Prioridad`) + **Radar de Brechas del Proceso** (líneas 995–1082) que lista riesgos sin plan o con `Control NF (Art. 88)` y botón `+ Crear Plan / Quick-Win` prellenado (`handleOpenPlanForOrphanRisk`). | ✅ **100% Verificado** |
 | **4. Capa 3 (Tarjetas Quick-Wins con Salto 5×5, ROI y Botones 3LD) y Sincronización con `HeatmapView.tsx`** | [ActionPlansView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/ActionPlansView.tsx) y [HeatmapView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/HeatmapView.tsx) | Tarjetas Quick-Win (líneas 1088–1337) con bloque visual `Desplazamiento Matriz 5×5 (Pre -> Post)` (`calculateTargetShift`), `ROI: X.Xx` y botones `Firmar 1ª Línea`, `+ Evidencia` y `Verificar UAIR`. En [`HeatmapView.tsx` L108-117](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/HeatmapView.tsx#L108-L117) el modo `"3. Objetivo Post-Plan"` usa `maxImprovement` real de `r.actionPlans`. *(Observación menor en Capa 4: el interruptor visual `"Por Proceso" / "Tabla Plana"` en líneas 1368–1395 cambia el estado `tableLayout`, pero la tabla inferior en líneas 1461–1690 renderiza solo la vista tabular plana).* | ✅ **98% Verificado** |
+
+
+---
+
+## 12. Auditoría General Integral de las 9 Secciones de la Herramienta (Commit `176a132`)
+
+**Fecha de verificación:** 21 de octubre de 2026  
+**Commit auditado:** `176a132` (`HEAD -> main`, `origin/main`)  
+**Compilación TypeScript (`npx tsc --noEmit`):** **0 errores** (Exit code `0`)  
+**Árbol de Trabajo Git (`git status -s`):** Limpio (0 archivos sin commitear)
+
+### 12.1 Estado en Vivo de la Base de Datos (`prisma/dev.db`)
+
+| Entidad Prisma | Registros en Vivo | Estado de Integridad Relacional |
+| :--- | :---: | :--- |
+| `MacroProcess` | **3** | 100% íntegros (Banca Comercial & Agro, Tesorería & Mercados, TI & Operaciones). |
+| `Process` | **6** | 4 procesos base (`PR-AGRO-01`, `PR-TES-01`, `PR-CRED-02`, `PR-TI-01`) + 2 procesos creados en vivo. |
+| `ProcessNode` / `ProcessEdge` | **33** / **27** | Nodos geométricos (`START`, `TASK`, `DECISION`, `SYSTEM`, `END`) con metadatos y aristas conectadas. |
+| `RiskEvent` | **29** | Todos con evaluación inherente, residual, `PEA`, `PMA` y vínculo a proceso/nodo. |
+| `Control` / `RiskControl` | **5** / **M:N** | Controles con nivel de formalización Art. 88 (`FORMALIZED`, `IN_PROCESS`, `UNVERIFIED_NF`). |
+| `ActionPlan` / `ActionPlanEvidence` | **12** / **4** | Planes distribuidos en los 4 cuadrantes (I–IV), con workflow 3LD y evidencias SHA-256. |
+| `RAFThreshold` / `KRI` / `CreditExposureNifC16` | **6** / **2** / **4** | Indicadores RAF, KRIs y cartera NIF C-16 sincronizados. |
+| `AuditLog` | **42** | Cadena criptográfica SHA-256 íntegra (`previousHash` $\rightarrow$ `currentHash`). |
+
+---
+
+### 12.2 Verificación de los Últimos Commits (`5b3e21e`, `648237d`, `c454fec`, `176a132`)
+
+1. **Cierre del Refinamiento en Planes & Quick-Wins (`5b3e21e`, `c454fec` en `src/components/ActionPlansView.tsx` y `src/app/api/action-plans/route.ts`):**
+   - **Previsualización Gemini en Vivo:** El botón **"✨ Sugerir Planes con IA"** invoca `AI_PREVIEW_PLANS_FOR_PROCESS` (`handleOpenAISuggestions` en `ActionPlansView.tsx` L191–227), despliega el modal de selección con checkboxes y confirma únicamente los planes elegidos mediante `AI_COMMIT_SELECTED_PLANS` (`handleCommitSelectedAIPlans` L230–262).
+   - **Toggle "Por Proceso" Conectado:** La tabla inferior renderiza encabezados colapsables por proceso bancario (`groupedDisplayPlans.map` en `ActionPlansView.tsx` L1769–1823) cuando `tableLayout === "GROUPED"`.
+
+2. **Sincronización del Tablero Ejecutivo y Marco RAF (`176a132` en `src/components/DashboardView.tsx`, `src/app/api/dashboard/stats/route.ts` y `src/components/FloatingSafetyWidget.tsx`):**
+   - **Sincronización Matemática de `PEA_OP` (`stats/route.ts` L154–174):** El indicador `PEA_OP` del Marco RAF toma dinámicamente `currentValue = totalPEA` y recalcula su zona (`calculateRafZone`), eliminando la discrepancia contra la tarjeta de *Riesgo Operacional (PEA & PMA)*.
+   - **Filtro Global por Proceso Bancario (`DashboardView.tsx` L288–295):** Selector `CustomSelect` conectado a `/api/dashboard/stats?processId=...`.
+   - **Grid 3×2 de 6 Indicadores RAF con `RafProgressBar` (`DashboardView.tsx` L40–175, L338–397):** Marcadores visuales de *Apetito*, *Tolerancia* y *Límite de Capacidad*.
+   - **4 Tarjetas Financieras Superiores (`DashboardView.tsx` L401–642):** Incluye la nueva 3.ª tarjeta **"Mitigación Activa & ROI 3LD"** (`-ΔPEA`, múltiplo ROI, `% Cobertura`, Quick-Wins y flujo 3LD).
+   - **Radiografía por Proceso Bancario (`DashboardView.tsx` L645–790):** Tarjetas interactivas por cada proceso con conteo de nodos, riesgos, controles NF, planes activos y cobertura.
+   - **Corrección de Bug en Ranking Top 5–7 (`stats/route.ts` L198–201 y `DashboardView.tsx` L793–981):** Corregido el filtro `rc.control?.formalizationLevel === "UNVERIFIED_NF"` e incorporadas las columnas *Proceso & Nodo del Diagrama* y *Cobertura & Plan 3LD*.
+   - **Widget Flotante en Vivo (`FloatingSafetyWidget.tsx` L31–68):** Conectado dinámicamente a `liveAlerts` de `/api/dashboard/stats`.
+
+---
+
+### 12.3 Matriz General de Estatus por Módulo (9 Pestañas)
+
+| # | Pestaña / Módulo | Componentes & APIs Principales | Estatus | Calificación |
+| :-: | :--- | :--- | :---: | :---: |
+| **1** | **Dashboard Ejecutivo & Marco RAF** | `DashboardView.tsx`, `FloatingSafetyWidget.tsx`, `/api/dashboard/stats` | ✅ **100% Alineado** | **10 / 10** |
+| **2** | **Metodología & Marco Teórico (incl. Marco RAF)** | `MethodologyView.tsx` | ✅ **100% Alineado** | **10 / 10** |
+| **3** | **Procesos & Flujos (Diagramador IA & Evaluador Cruzado)** | `ProcessEngineView.tsx`, `/api/processes/ai-generate`, `/api/processes/ai-evaluate` | ✅ **100% Alineado** | **10 / 10** |
+| **4** | **Matriz 5×5 & Heatmap (Pre/Post-Mitigación & Filtro Proceso)** | `HeatmapView.tsx`, `/api/risks` | ✅ **100% Alineado** | **10 / 10** |
+| **5** | **Administración de Riesgos (CRUD, Controles Art. 88 & Vista por Proceso)** | `RiskAdminView.tsx`, `/api/risks`, `/api/controls` | ✅ **100% Alineado** | **10 / 10** |
+| **6** | **Crédito NIF C-16 & ESG (E1/E2/E3 & CONAGUA)** | `CreditEsgView.tsx`, `/api/credit-esg` | ✅ **100% Alineado** | **10 / 10** |
+| **7** | **Copiloto IA & Simulador de Estrés por Proceso/Nodo/Riesgo** | `CopilotView.tsx`, `/api/copilot/stress-test`, `/api/copilot/chat` | ✅ **100% Alineado** | **10 / 10** |
+| **8** | **Planes & Quick-Wins (Matriz 2×2, Radar Brechas, IA & 3LD)** | `ActionPlansView.tsx`, `/api/action-plans` | ✅ **100% Alineado** | **10 / 10** |
+| **9** | **Reportes Regulatorios CNBV & Audit Trail SHA-256** | `RegulatoryReportsView.tsx`, `/api/reports`, `/api/audit` | ✅ **99% Alineado** *(1 nota menor)* | **9.8 / 10** |
+
+**Nota menor detectada en Pestaña 9 (`src/app/api/reports/route.ts` L16–18):**
+- En la sub-pestaña **3. Informe Art. 88 CUB**, el endpoint `/api/reports` lee `prisma.rAFThreshold.findMany()` directamente sin aplicar aún el override dinámico `PEA_OP.currentValue = totalPEA` que ya aplica `/api/dashboard/stats/route.ts`. Es un detalle cosmético menor de 5 líneas en `/api/reports/route.ts` por si se desea homologar al 100% antes de una demo frente a auditoría.

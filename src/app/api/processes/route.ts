@@ -218,9 +218,157 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "Nodo eliminado correctamente" });
     }
 
+    // Acción 7: Eliminar proceso completo con sus dependencias
+    if (action === "DELETE_PROCESS") {
+      const { processId, userRole = "UAIR_ADMIN" } = body;
+      if (!processId) {
+        return NextResponse.json({ success: false, error: "processId requerido" }, { status: 400 });
+      }
+
+      const processToDelete = await prisma.process.findUnique({
+        where: { id: processId },
+      });
+
+      if (!processToDelete) {
+        return NextResponse.json({ success: false, error: "Proceso no encontrado" }, { status: 404 });
+      }
+
+      // 1. Desvincular controles de los nodos de este proceso
+      const nodes = await prisma.processNode.findMany({ where: { processId }, select: { id: true } });
+      const nodeIds = nodes.map((n) => n.id);
+
+      if (nodeIds.length > 0) {
+        await prisma.control.updateMany({
+          where: { processNodeId: { in: nodeIds } },
+          data: { processNodeId: null },
+        });
+      }
+
+      // 2. Desvincular o eliminar riesgos asociados al proceso
+      const risks = await prisma.riskEvent.findMany({ where: { processId }, select: { id: true } });
+      const riskIds = risks.map((r) => r.id);
+
+      if (riskIds.length > 0) {
+        await prisma.riskControlMap.deleteMany({ where: { riskEventId: { in: riskIds } } });
+        await prisma.kRI.deleteMany({ where: { riskEventId: { in: riskIds } } });
+        await prisma.lossEvent.deleteMany({ where: { riskEventId: { in: riskIds } } });
+        await prisma.actionPlan.deleteMany({ where: { riskEventId: { in: riskIds } } });
+        await prisma.riskMatrixSnapshot.deleteMany({ where: { riskEventId: { in: riskIds } } });
+        await prisma.riskEvent.deleteMany({ where: { id: { in: riskIds } } });
+      }
+
+      // 3. Eliminar aristas y nodos del proceso
+      await prisma.processEdge.deleteMany({ where: { processId } });
+      await prisma.processNode.deleteMany({ where: { processId } });
+      await prisma.subProcess.deleteMany({ where: { processId } });
+
+      // 4. Eliminar el proceso
+      await prisma.process.delete({
+        where: { id: processId },
+      });
+
+      // 5. Registrar en AuditLog SHA-256
+      const user =
+        (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+        (await prisma.user.findFirst());
+
+      if (user) {
+        await recordAuditLog({
+          userId: user.id,
+          userRole: userRole as RoleType,
+          actionType: "DELETE_PROCESS",
+          entityName: "Process",
+          entityId: processId,
+          previousState: { code: processToDelete.code, name: processToDelete.name },
+          newState: null,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Proceso "${processToDelete.name}" (${processToDelete.code}) eliminado exitosamente.`,
+      });
+    }
+
     return NextResponse.json({ success: false, error: "Acción no reconocida" }, { status: 400 });
   } catch (error) {
     console.error("Error in /api/processes:", error);
     return NextResponse.json({ success: false, error: "Error al procesar solicitud" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const processId = searchParams.get("processId");
+
+    if (!processId) {
+      return NextResponse.json({ success: false, error: "processId requerido" }, { status: 400 });
+    }
+
+    const processToDelete = await prisma.process.findUnique({
+      where: { id: processId },
+    });
+
+    if (!processToDelete) {
+      return NextResponse.json({ success: false, error: "Proceso no encontrado" }, { status: 404 });
+    }
+
+    // 1. Desvincular controles de los nodos
+    const nodes = await prisma.processNode.findMany({ where: { processId }, select: { id: true } });
+    const nodeIds = nodes.map((n) => n.id);
+
+    if (nodeIds.length > 0) {
+      await prisma.control.updateMany({
+        where: { processNodeId: { in: nodeIds } },
+        data: { processNodeId: null },
+      });
+    }
+
+    // 2. Eliminar riesgos asociados al proceso
+    const risks = await prisma.riskEvent.findMany({ where: { processId }, select: { id: true } });
+    const riskIds = risks.map((r) => r.id);
+
+    if (riskIds.length > 0) {
+      await prisma.riskControlMap.deleteMany({ where: { riskEventId: { in: riskIds } } });
+      await prisma.kRI.deleteMany({ where: { riskEventId: { in: riskIds } } });
+      await prisma.lossEvent.deleteMany({ where: { riskEventId: { in: riskIds } } });
+      await prisma.actionPlan.deleteMany({ where: { riskEventId: { in: riskIds } } });
+      await prisma.riskMatrixSnapshot.deleteMany({ where: { riskEventId: { in: riskIds } } });
+      await prisma.riskEvent.deleteMany({ where: { id: { in: riskIds } } });
+    }
+
+    // 3. Eliminar aristas, nodos y subprocesos
+    await prisma.processEdge.deleteMany({ where: { processId } });
+    await prisma.processNode.deleteMany({ where: { processId } });
+    await prisma.subProcess.deleteMany({ where: { processId } });
+
+    // 4. Eliminar el proceso
+    await prisma.process.delete({
+      where: { id: processId },
+    });
+
+    // 5. Auditoría SHA-256
+    const user = await prisma.user.findFirst();
+    if (user) {
+      await recordAuditLog({
+        userId: user.id,
+        userRole: user.role as RoleType,
+        actionType: "DELETE_PROCESS",
+        entityName: "Process",
+        entityId: processId,
+        previousState: { code: processToDelete.code, name: processToDelete.name },
+        newState: null,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Proceso "${processToDelete.name}" (${processToDelete.code}) eliminado exitosamente.`,
+    });
+  } catch (error) {
+    console.error("Error deleting process:", error);
+    return NextResponse.json({ success: false, error: "Error al eliminar proceso" }, { status: 500 });
+  }
+}
+

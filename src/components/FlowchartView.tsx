@@ -279,6 +279,10 @@ function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
   const [aiChatInput, setAiChatInput] = useState("");
   const [isGeneratingProcess, setIsGeneratingProcess] = useState(false);
 
+  // Modal 4: Confirmar Eliminación de Proceso
+  const [isDeleteProcessModalOpen, setIsDeleteProcessModalOpen] = useState(false);
+  const [isDeletingProcess, setIsDeletingProcess] = useState(false);
+
   // Auto-resize y auto-scroll para la conversación del Asistente IA
   const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -357,18 +361,28 @@ function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
     try {
       const res = await fetch("/api/processes");
       const data = await res.json();
-      if (data.success && data.processes.length > 0) {
-        setProcesses(data.processes);
+      if (data.success) {
+        const procList = data.processes || [];
+        setProcesses(procList);
         if (selectId) {
           setSelectedProcessId(selectId);
-        } else if (!selectedProcessId) {
-          setSelectedProcessId(data.processes[0].id);
+        } else if (procList.length > 0) {
+          // Si el seleccionado actual ya no existe en la lista, seleccionar el primero disponible
+          const exists = procList.some((p: any) => p.id === selectedProcessId);
+          if (!exists || !selectedProcessId) {
+            setSelectedProcessId(procList[0].id);
+          }
+        } else {
+          setSelectedProcessId("");
+          setActiveProcess(null);
+          setNodes([]);
+          setEdges([]);
         }
       }
     } catch (err) {
       console.error("Error refreshing processes:", err);
     }
-  }, [selectedProcessId]);
+  }, [selectedProcessId, setNodes, setEdges]);
 
   useEffect(() => {
     refreshProcessList();
@@ -964,6 +978,33 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
     }, 200);
   };
 
+  // Eliminar el proceso actual seleccionado
+  const handleDeleteCurrentProcess = async () => {
+    if (!selectedProcessId) return;
+    setIsDeletingProcess(true);
+    try {
+      const res = await fetch(`/api/processes?processId=${selectedProcessId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsDeleteProcessModalOpen(false);
+        setStatusBanner(data.message || "Proceso eliminado exitosamente.");
+        setTimeout(() => setStatusBanner(null), 4500);
+        setSelectedNode(null);
+        setIsDrawerOpen(false);
+        await refreshProcessList();
+      } else {
+        alert(data.error || "Error al eliminar el proceso");
+      }
+    } catch (err: any) {
+      console.error("Error deleting process:", err);
+      alert("Error de red al intentar eliminar el proceso.");
+    } finally {
+      setIsDeletingProcess(false);
+    }
+  };
+
   // Auditar nodo individual con Copilot (Drawer)
   const handleAuditNode = async () => {
     if (!selectedNode) return;
@@ -1155,6 +1196,17 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
               className="min-w-[240px]"
               dropdownClassName="w-[320px]"
             />
+            {selectedProcessId && (
+              <button
+                type="button"
+                onClick={() => setIsDeleteProcessModalOpen(true)}
+                className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded flex items-center gap-1 transition-colors cursor-pointer shadow-xs font-semibold"
+                title={`Eliminar el proceso actual "${activeProcess?.name || ''}"`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Borrar</span>
+              </button>
+            )}
           </div>
 
           {/* Botón: Generar Proceso con IA */}
@@ -2229,6 +2281,99 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Confirmación para Eliminar Proceso Bancario */}
+      {isDeleteProcessModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-bx shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header del modal */}
+            <div className="bg-rose-50 border-b border-rose-100 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Eliminar Proceso Bancario</h3>
+                  <p className="text-xs text-rose-700">Esta acción removerá el flujo del catálogo institucional</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteProcessModalOpen(false)}
+                disabled={isDeletingProcess}
+                className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="p-5 space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>Código de Proceso:</span>
+                  <span className="font-mono font-bold text-gray-800">{activeProcess?.code || "N/A"}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>Nombre del Proceso:</span>
+                  <span className="font-semibold text-gray-900 text-right max-w-[280px] truncate">
+                    {activeProcess?.name || "Sin nombre"}
+                  </span>
+                </div>
+                {activeProcess?.macroProcess?.name && (
+                  <div className="flex items-center justify-between text-gray-500">
+                    <span>Macroproceso:</span>
+                    <span className="text-gray-800 text-right max-w-[280px] truncate">
+                      {activeProcess.macroProcess.name}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-gray-500">
+                  <span>Nodos en el diagrama:</span>
+                  <span className="font-semibold text-gray-800">{nodes.length} nodos</span>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-900 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  Impacto de la eliminación:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800 pl-1">
+                  <li>Se eliminarán todos los nodos y conectores del diagrama.</li>
+                  <li>Se desvincularán los controles asociados a los pasos del proceso.</li>
+                  <li>Se registrará una traza inalterable con sello criptográfico <strong>SHA-256</strong> en la Bitácora de Auditoría (Audit Log CNBV).</li>
+                </ul>
+              </div>
+
+              <p className="text-xs text-gray-600">
+                ¿Estás seguro de que deseas eliminar permanentemente este proceso bancario?
+              </p>
+
+              {/* Botones de acción */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteProcessModalOpen(false)}
+                  disabled={isDeletingProcess}
+                  className="px-3.5 py-1.5 text-xs text-gray-700 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentProcess}
+                  disabled={isDeletingProcess}
+                  className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingProcess ? "Eliminando proceso..." : "Sí, Eliminar Proceso"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

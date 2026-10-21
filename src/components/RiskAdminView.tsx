@@ -1,7 +1,7 @@
 // src/components/RiskAdminView.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
 import { RISK_TYPE_LABELS } from "@/lib/constants";
 import { BusinessLineBancoBx, RiskTypeCNBV, RoleType } from "@/types";
@@ -17,6 +17,10 @@ import {
   Lock,
   AlertTriangle,
   RefreshCw,
+  Layers,
+  Table as TableIcon,
+  Workflow,
+  Building2,
 } from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 
@@ -27,10 +31,13 @@ interface RiskAdminViewProps {
 
 export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps) {
   const [risks, setRisks] = useState<any[]>([]);
+  const [processes, setProcesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedZone, setSelectedZone] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
+  const [selectedProcessId, setSelectedProcessId] = useState("ALL");
+  const [viewLayout, setViewLayout] = useState<"GROUPED" | "FLAT">("GROUPED");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
@@ -52,12 +59,25 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
   const [speiImpact, setSpeiImpact] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Fetch registered processes
+  useEffect(() => {
+    fetch("/api/processes")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.processes) {
+          setProcesses(data.processes);
+        }
+      })
+      .catch((err) => console.error("Error fetching processes in RiskAdminView:", err));
+  }, []);
+
   // Fetch risks based on filters
   const fetchRisks = () => {
     setLoading(true);
     let url = `/api/risks?businessLine=${businessLine}`;
     if (selectedZone !== "ALL") url += `&zone=${selectedZone}`;
     if (selectedType !== "ALL") url += `&riskType=${selectedType}`;
+    if (selectedProcessId !== "ALL") url += `&processId=${selectedProcessId}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
 
     fetch(url)
@@ -75,7 +95,7 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
 
   useEffect(() => {
     fetchRisks();
-  }, [businessLine, selectedZone, selectedType, search]);
+  }, [businessLine, selectedZone, selectedType, selectedProcessId, search]);
 
   // Extract unique taxonomies for the form
   useEffect(() => {
@@ -127,6 +147,7 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
     try {
       setSubmitting(true);
       const targetStatus = currentRole === "PROCESS_OWNER" ? "UNDER_REVIEW" : "PUBLISHED";
+      const targetProcessId = selectedProcessId !== "ALL" ? selectedProcessId : risks[0]?.processId;
 
       const res = await fetch("/api/risks", {
         method: "POST",
@@ -139,7 +160,7 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
           taxonomyId,
           origin: "PROCESSES",
           businessUnitId: risks[0]?.businessUnitId,
-          processId: risks[0]?.processId,
+          processId: targetProcessId,
           inherentProbability: prob,
           inherentImpact: imp,
           combinedControlFactor: 0.35,
@@ -176,8 +197,151 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
     }
   };
 
+  // Group risks by Process
+  const groupedRisks = useMemo(() => {
+    const groups: { [key: string]: { process: any; risks: any[] } } = {};
+
+    risks.forEach((r) => {
+      const pId = r.processId || "UNASSIGNED";
+      if (!groups[pId]) {
+        const found = processes.find((p) => p.id === pId);
+        const processInfo = found || r.process || {
+          id: "UNASSIGNED",
+          code: "TRANSVERSAL",
+          name: "Riesgos Institucionales Transversales / Sin Proceso",
+          macroProcess: { name: "Gobernanza General B×+" },
+          businessUnit: { name: "Banco Ve por Más" },
+        };
+        groups[pId] = { process: processInfo, risks: [] };
+      }
+      groups[pId].risks.push(r);
+    });
+
+    return Object.values(groups);
+  }, [risks, processes]);
+
   const isInternalAudit = currentRole === "INTERNAL_AUDITOR";
   const canApprove = currentRole === "UAIR_ADMIN" || currentRole === "C_LEVEL_CAIR";
+
+  const renderRiskRow = (r: any, showProcessBadge = false) => {
+    const isUnderReview = r.status === "UNDER_REVIEW";
+    const nodeLabel = r.processNode?.label || "Nivel Proceso General";
+    const nodeType = r.processNode?.nodeType || "TASK_STEP";
+
+    return (
+      <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
+        <td className="py-3 px-4 font-mono font-bold text-gray-700 whitespace-nowrap">
+          <div>{r.code}</div>
+          <div className="text-[10px] text-gray-400 font-normal">
+            {new Date(r.createdAt).toLocaleDateString("es-MX")}
+          </div>
+          {showProcessBadge && r.process && (
+            <div className="text-[9px] font-mono text-[#3299A8] mt-0.5 truncate max-w-[120px]">
+              {r.process.code}
+            </div>
+          )}
+        </td>
+
+        <td className="py-3 px-4 max-w-sm">
+          <div className="font-bold text-gray-900 leading-snug">{r.title}</div>
+          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+            <strong className="text-gray-700">Causa:</strong> {r.cause}
+          </div>
+          <div className="text-[11px] text-gray-600 line-clamp-1">
+            <strong className="text-gray-700">Consecuencia:</strong> {r.consequence}
+          </div>
+        </td>
+
+        {/* Columna de Trazabilidad: Nodo / Paso del Diagrama */}
+        <td className="py-3 px-4 min-w-[150px]">
+          <div className="flex items-center gap-1.5">
+            <Workflow className="w-3.5 h-3.5 text-[#3299A8] shrink-0" />
+            <span className="font-semibold text-gray-800 text-xs truncate max-w-[180px]" title={nodeLabel}>
+              {nodeLabel}
+            </span>
+          </div>
+          <div className="mt-1">
+            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+              {nodeType}
+            </span>
+          </div>
+        </td>
+
+        <td className="py-3 px-4">
+          <span className="font-bold text-gray-800 text-[11px]">
+            {r.taxonomy?.riskType}
+          </span>
+          <div className="text-[10px] text-gray-400">{r.businessUnit?.name}</div>
+        </td>
+
+        <td className="py-3 px-4 text-center font-mono">
+          <span className="font-semibold text-gray-700">{r.inherentScore}</span>
+          <span className="text-[10px] text-gray-400 block">
+            ({r.inherentProbability}×{r.inherentImpact})
+          </span>
+        </td>
+
+        <td className="py-3 px-4 text-center">
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
+              r.residualZone
+            )}`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
+                r.residualZone === "GREEN"
+                  ? "bg-emerald-600"
+                  : r.residualZone === "YELLOW"
+                  ? "bg-amber-500"
+                  : r.residualZone === "ORANGE"
+                  ? "bg-orange-600"
+                  : "bg-rose-600"
+              }`}
+            />
+            <span>{r.residualScore} ({r.residualZone})</span>
+          </span>
+        </td>
+
+        <td className="py-3 px-4 text-right font-bold font-mono text-orange-700 whitespace-nowrap">
+          {formatMXN(r.maxAnnualLossPMA)}
+        </td>
+        <td className="py-3 px-4 text-right font-medium font-mono text-gray-700 whitespace-nowrap">
+          {formatMXN(r.expectedAnnualLossPEA)}
+        </td>
+
+        <td className="py-3 px-4 text-center">
+          {isUnderReview ? (
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-900 bg-amber-50/90 px-2 py-0.5 rounded-[3px] border border-amber-300 shadow-xs whitespace-nowrap">
+                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>En Revisión UAIR (1ª Línea)</span>
+              </span>
+              {canApprove && (
+                <button
+                  onClick={() => handleApproveRisk(r.id)}
+                  disabled={approvingId === r.id}
+                  className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 transition-transform hover:scale-105 shadow-sm disabled:opacity-50"
+                  title="Aprobar y publicar este riesgo en la Matriz Viva (2ª Línea)"
+                >
+                  {approvingId === r.id ? (
+                    <RefreshCw className="w-3 h-3 animate-spin text-[#C0D725]" />
+                  ) : (
+                    <ShieldCheck className="w-3 h-3 text-[#C0D725]" />
+                  )}
+                  <span>Aprobar y Publicar</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-emerald-900 bg-emerald-50/90 px-2 py-0.5 rounded-[3px] border border-emerald-300 shadow-xs whitespace-nowrap">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span>Publicado (Matriz Viva)</span>
+            </span>
+          )}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="space-y-6 w-full">
@@ -256,149 +420,185 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
         })}
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter and Search Bar with Process Selector and View Mode */}
       <div className="bg-white rounded-bx p-3 shadow-card border border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por código, título, causa o consecuencia..."
+            placeholder="Buscar por código, título, causa, consecuencia o nodo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-transparent outline-none text-xs text-gray-800"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-medium whitespace-nowrap">Filtrar por Zona RAF:</span>
-          <div className="w-60">
-            <CustomSelect
-              options={[
-                { value: "ALL", label: "Todas las Zonas" },
-                { value: "GREEN", label: "Verde (Dentro Apetito)", dotColor: "#10B981" },
-                { value: "YELLOW", label: "Amarillo (Preventivo)", dotColor: "#F59E0B" },
-                { value: "ORANGE", label: "Naranja (Excede Tolerancia)", dotColor: "#F97316" },
-                { value: "RED", label: "Rojo (Transgresión)", dotColor: "#EF4444" },
-              ]}
-              value={selectedZone}
-              onChange={setSelectedZone}
-              theme="light"
-            />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Selector de Proceso Bancario */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 font-medium whitespace-nowrap">Proceso:</span>
+            <div className="w-64 min-w-0">
+              <CustomSelect
+                options={[
+                  { value: "ALL", label: "Todos los Procesos Bancarios" },
+                  ...processes.map((p) => ({
+                    value: p.id,
+                    label: `${p.code} — ${p.name}`,
+                  })),
+                ]}
+                value={selectedProcessId}
+                onChange={setSelectedProcessId}
+                theme="light"
+              />
+            </div>
+          </div>
+
+          {/* Selector de Zona RAF */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 font-medium whitespace-nowrap">Zona RAF:</span>
+            <div className="w-48 min-w-0">
+              <CustomSelect
+                options={[
+                  { value: "ALL", label: "Todas las Zonas" },
+                  { value: "GREEN", label: "Verde (Apetito)", dotColor: "#10B981" },
+                  { value: "YELLOW", label: "Amarillo (Preventivo)", dotColor: "#F59E0B" },
+                  { value: "ORANGE", label: "Naranja (Tolerancia)", dotColor: "#F97316" },
+                  { value: "RED", label: "Rojo (Capacidad)", dotColor: "#EF4444" },
+                ]}
+                value={selectedZone}
+                onChange={setSelectedZone}
+                theme="light"
+              />
+            </div>
+          </div>
+
+          {/* Selector de Formato de Vista */}
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-md border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setViewLayout("GROUPED")}
+              className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
+                viewLayout === "GROUPED"
+                  ? "bg-[#1F242B] text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Organizar riesgos en bloques bajo su Proceso Bancario correspondiente"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#C0D725]" />
+              <span>Por Procesos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewLayout("FLAT")}
+              className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
+                viewLayout === "FLAT"
+                  ? "bg-[#1F242B] text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Vista de tabla plana estándar consolidada"
+            >
+              <TableIcon className="w-3.5 h-3.5 text-[#3299A8]" />
+              <span>Tabla Plana</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Risks Table with Governance Actions */}
-      <div className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#F5F7F9] text-gray-600 font-semibold border-b border-gray-200 uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="py-2.5 px-4 w-28">Código</th>
-                <th className="py-2.5 px-4">Triada CNBV (Causa &rarr; Evento &rarr; Consecuencia)</th>
-                <th className="py-2.5 px-4">Tipo & Unidad</th>
-                <th className="py-2.5 px-4 text-center">Inherente</th>
-                <th className="py-2.5 px-4 text-center">Residual</th>
-                <th className="py-2.5 px-4 text-right">PMA (VaR 99.9%)</th>
-                <th className="py-2.5 px-4 text-right">PEA (Esperada)</th>
-                <th className="py-2.5 px-4 text-center">Gobernanza / Aprobación</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {risks.map((r) => {
-                const isUnderReview = r.status === "UNDER_REVIEW";
-                return (
-                  <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-gray-600">
-                      <div>{r.code}</div>
-                      <div className="text-[10px] text-gray-400 font-normal">
-                        {new Date(r.createdAt).toLocaleDateString("es-MX")}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 max-w-md">
-                      <div className="font-bold text-gray-900 leading-snug">{r.title}</div>
-                      <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-                        <strong className="text-gray-700">Causa:</strong> {r.cause}
-                      </div>
-                      <div className="text-[11px] text-gray-600 line-clamp-1">
-                        <strong className="text-gray-700">Consecuencia:</strong> {r.consequence}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-bold text-gray-800 text-[11px]">
-                        {r.taxonomy?.riskType}
+      {/* RENDER TABLE: GROUPED BY PROCESS (DEFAULT) OR FLAT TABLE */}
+      {viewLayout === "GROUPED" ? (
+        <div className="space-y-6">
+          {groupedRisks.map((group) => {
+            const p = group.process;
+            const groupPEA = group.risks.reduce((acc, curr) => acc + (curr.expectedAnnualLossPEA || 0), 0);
+            const groupPMA = group.risks.reduce((acc, curr) => acc + (curr.maxAnnualLossPMA || 0), 0);
+
+            return (
+              <div
+                key={p.id}
+                className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden animate-in fade-in duration-200"
+              >
+                {/* Cabecera del Proceso Bancario */}
+                <div className="bg-[#1F242B] text-white px-5 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold bg-[#C0D725] text-[#1F242B] px-2 py-0.5 rounded uppercase">
+                        {p.code}
                       </span>
-                      <div className="text-[10px] text-gray-400">{r.businessUnit?.name}</div>
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono">
-                      <span className="font-semibold text-gray-700">{r.inherentScore}</span>
-                      <span className="text-[10px] text-gray-400 block">
-                        ({r.inherentProbability}×{r.inherentImpact})
+                      <span className="text-[11px] text-gray-400 font-mono">
+                        {p.macroProcess?.name || "Banca Múltiple"}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
-                          r.residualZone
-                        )}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-[1px] inline-block ${
-                            r.residualZone === "GREEN"
-                              ? "bg-emerald-600"
-                              : r.residualZone === "YELLOW"
-                              ? "bg-amber-500"
-                              : r.residualZone === "ORANGE"
-                              ? "bg-orange-600"
-                              : "bg-rose-600"
-                          }`}
-                        />
-                        <span>{r.residualScore} ({r.residualZone})</span>
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-bold font-mono text-orange-700">
-                      {formatMXN(r.maxAnnualLossPMA)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-medium font-mono text-gray-700">
-                      {formatMXN(r.expectedAnnualLossPEA)}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {isUnderReview ? (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-900 bg-amber-50/90 px-2 py-0.5 rounded-[3px] border border-amber-300 shadow-xs">
-                            <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                            <span>En Revisión UAIR (1ª Línea)</span>
-                          </span>
-                          {canApprove && (
-                            <button
-                              onClick={() => handleApproveRisk(r.id)}
-                              disabled={approvingId === r.id}
-                              className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 transition-transform hover:scale-105 shadow-sm disabled:opacity-50"
-                              title="Aprobar y publicar este riesgo en la Matriz Viva (2ª Línea)"
-                            >
-                              {approvingId === r.id ? (
-                                <RefreshCw className="w-3 h-3 animate-spin text-[#C0D725]" />
-                              ) : (
-                                <ShieldCheck className="w-3 h-3 text-[#C0D725]" />
-                              )}
-                              <span>Aprobar y Publicar</span>
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-emerald-900 bg-emerald-50/90 px-2 py-0.5 rounded-[3px] border border-emerald-300 shadow-xs">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>Publicado (Matriz Viva)</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    <h3 className="text-sm font-bold text-white font-serif tracking-tight">
+                      {p.name}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="bg-white/10 px-3 py-1.5 rounded border border-white/10 flex items-center gap-2">
+                      <span className="text-gray-300">Riesgos:</span>
+                      <strong className="text-white font-mono">{group.risks.length}</strong>
+                    </div>
+                    <div className="bg-white/10 px-3 py-1.5 rounded border border-white/10 flex items-center gap-2">
+                      <span className="text-gray-300">PEA Proceso:</span>
+                      <strong className="text-[#C0D725] font-mono">{formatMXN(groupPEA)}</strong>
+                    </div>
+                    <div className="bg-white/10 px-3 py-1.5 rounded border border-white/10 flex items-center gap-2">
+                      <span className="text-gray-300">PMA (99.9%):</span>
+                      <strong className="text-orange-400 font-mono">{formatMXN(groupPMA)}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla de Riesgos de este Proceso */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#F5F7F9] text-gray-600 font-semibold border-b border-gray-200 uppercase text-[10px] tracking-wider">
+                      <tr>
+                        <th className="py-2.5 px-4 w-28">Código</th>
+                        <th className="py-2.5 px-4">Triada CNBV (Causa &rarr; Evento &rarr; Consecuencia)</th>
+                        <th className="py-2.5 px-4">Nodo del Diagramador</th>
+                        <th className="py-2.5 px-4">Tipo & Unidad</th>
+                        <th className="py-2.5 px-4 text-center">Inherente</th>
+                        <th className="py-2.5 px-4 text-center">Residual</th>
+                        <th className="py-2.5 px-4 text-right">PMA (VaR 99.9%)</th>
+                        <th className="py-2.5 px-4 text-right">PEA (Esperada)</th>
+                        <th className="py-2.5 px-4 text-center">Gobernanza / Aprobación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {group.risks.map((r) => renderRiskRow(r, false))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        /* VISTA TABULAR PLANA CONSOLIDADA */
+        <div className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#F5F7F9] text-gray-600 font-semibold border-b border-gray-200 uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-4 w-28">Código</th>
+                  <th className="py-2.5 px-4">Triada CNBV (Causa &rarr; Evento &rarr; Consecuencia)</th>
+                  <th className="py-2.5 px-4">Nodo del Diagramador</th>
+                  <th className="py-2.5 px-4">Tipo & Unidad</th>
+                  <th className="py-2.5 px-4 text-center">Inherente</th>
+                  <th className="py-2.5 px-4 text-center">Residual</th>
+                  <th className="py-2.5 px-4 text-right">PMA (VaR 99.9%)</th>
+                  <th className="py-2.5 px-4 text-right">PEA (Esperada)</th>
+                  <th className="py-2.5 px-4 text-center">Gobernanza / Aprobación</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {risks.map((r) => renderRiskRow(r, true))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE ALTA DE RIESGO */}
       {isModalOpen && !isInternalAudit && (

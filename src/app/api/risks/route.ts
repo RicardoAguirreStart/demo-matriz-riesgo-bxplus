@@ -13,8 +13,13 @@ export async function GET(request: Request) {
     const zone = searchParams.get("zone");
     const riskType = searchParams.get("riskType");
     const search = searchParams.get("search");
+    const processId = searchParams.get("processId");
 
     const where: any = {};
+
+    if (processId && processId !== "ALL") {
+      where.processId = processId;
+    }
 
     if (businessLine && businessLine !== "ALL") {
       where.businessUnit = { businessLine };
@@ -42,7 +47,11 @@ export async function GET(request: Request) {
       include: {
         taxonomy: true,
         businessUnit: true,
-        process: true,
+        process: {
+          include: {
+            macroProcess: true,
+          },
+        },
         processNode: true,
         actionPlans: true,
         controls: {

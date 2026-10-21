@@ -1,7 +1,7 @@
 // src/components/ActionPlansView.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { formatMXN, getZoneBadgeClasses } from "@/lib/utils";
 import { RoleType } from "@/types";
 import {
@@ -17,6 +17,9 @@ import {
   X,
   RefreshCw,
   Sparkles,
+  Workflow,
+  Building2,
+  Filter,
 } from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 
@@ -27,6 +30,8 @@ interface ActionPlansViewProps {
 export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [risks, setRisks] = useState<any[]>([]);
+  const [processes, setProcesses] = useState<any[]>([]);
+  const [selectedProcessId, setSelectedProcessId] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
 
@@ -49,6 +54,18 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
   const [evidenceFileName, setEvidenceFileName] = useState("");
   const [evidenceComments, setEvidenceComments] = useState("");
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
+
+  // Fetch processes
+  useEffect(() => {
+    fetch("/api/processes")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.processes) {
+          setProcesses(data.processes);
+        }
+      })
+      .catch((err) => console.error("Error fetching processes in ActionPlansView:", err));
+  }, []);
 
   const fetchPlans = () => {
     setLoading(true);
@@ -174,10 +191,20 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
     }
   };
 
-  const quickWins = plans.filter((p) => p.isQuickWin);
+  // Filter plans based on selected process
+  const filteredPlans = useMemo(() => {
+    if (selectedProcessId === "ALL") return plans;
+    return plans.filter((p) => p.riskEvent?.processId === selectedProcessId);
+  }, [plans, selectedProcessId]);
+
+  const quickWins = useMemo(() => {
+    return filteredPlans.filter((p) => p.isQuickWin);
+  }, [filteredPlans]);
+
   const selectedRisk = risks.find((r) => r.id === selectedRiskId);
   const livePEAReduction = selectedRisk ? selectedRisk.expectedAnnualLossPEA * improvementPct : 0;
   const livePMAReduction = selectedRisk ? selectedRisk.maxAnnualLossPMA * improvementPct : 0;
+
   const liveIsQuickWin =
     improvementPct >= 0.60 &&
     (costScale === "VERY_LOW" || costScale === "LOW") &&
@@ -218,21 +245,40 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header and Process Filter */}
+      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900 font-serif">
             Matriz de Priorización de Mitigación y Cuadrante &quot;Quick-Wins&quot;
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Cruce analítico de Potencial de Mejora (&ge;60% PEA) vs. Esfuerzo de Implementación (&le;90 días)
+            Cruce analítico de Potencial de Mejora (&ge;60% PEA) vs. Esfuerzo de Implementación (&le;90 días) por Proceso Bancario
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Selector de Filtro por Proceso */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filtrar por Proceso:</span>
+            <div className="w-64 min-w-0">
+              <CustomSelect
+                options={[
+                  { value: "ALL", label: "Todos los Procesos Bancarios" },
+                  ...processes.map((p) => ({
+                    value: p.id,
+                    label: `${p.code} — ${p.name}`,
+                  })),
+                ]}
+                value={selectedProcessId}
+                onChange={setSelectedProcessId}
+                theme="light"
+              />
+            </div>
+          </div>
+
           <span className="text-xs font-mono font-bold bg-[#C0D725] text-[#1F242B] px-3 py-1.5 rounded-[4px] border border-[#AEC41D] flex items-center gap-1.5 shadow-xs uppercase tracking-wide">
             <Zap className="w-3.5 h-3.5 fill-[#1F242B]" />
-            <span>{quickWins.length} Quick-Wins Identificados</span>
+            <span>{quickWins.length} Quick-Wins</span>
           </span>
 
           <button
@@ -258,119 +304,155 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               </h3>
               <p className="text-[11px] text-gray-600">
                 Iniciativas con reducción &ge; 60% en PEA/PMA y esfuerzo Bajo o Muy Bajo (&le;90 días).
+                {selectedProcessId !== "ALL" && (
+                  <span className="font-semibold text-emerald-800 ml-1">
+                    Filtrado por proceso activo.
+                  </span>
+                )}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {quickWins.map((plan) => (
-            <div
-              key={plan.id}
-              className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex flex-col justify-between space-y-3"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[10px] font-mono font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                    {plan.code}
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                    <Zap className="w-3 h-3 fill-emerald-600" />
-                    <span>QUICK-WIN ({plan.timeScale})</span>
-                  </span>
+        {quickWins.length === 0 ? (
+          <div className="p-6 text-center bg-white/60 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500">
+            No se identificaron iniciativas Quick-Win para el proceso seleccionado. Cambia el filtro para ver otros procesos o da de alta un nuevo plan.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {quickWins.map((plan) => (
+              <div
+                key={plan.id}
+                className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex flex-col justify-between space-y-3"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                      {plan.code}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                      <Zap className="w-3 h-3 fill-emerald-600" />
+                      <span>QUICK-WIN ({plan.timeScale})</span>
+                    </span>
+                  </div>
+
+                  <h4 className="font-bold text-gray-900 text-xs mt-1.5 leading-snug">
+                    {plan.title}
+                  </h4>
+                  <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                    {plan.description}
+                  </p>
+
+                  {/* Etiquetas de Proceso y Nodo del Diagrama */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    {plan.riskEvent?.process && (
+                      <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-cyan-50 text-cyan-900 border border-cyan-200 flex items-center gap-1">
+                        <Building2 className="w-3 h-3 text-[#3299A8]" />
+                        <span className="truncate max-w-[170px]" title={plan.riskEvent.process.name}>
+                          {plan.riskEvent.process.code} — {plan.riskEvent.process.name}
+                        </span>
+                      </span>
+                    )}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                      <Workflow className="w-3 h-3 text-slate-500" />
+                      <span className="truncate max-w-[140px]" title={plan.riskEvent?.processNode?.label || "Paso General"}>
+                        Nodo: {plan.riskEvent?.processNode?.label || "Paso General"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
 
-                <h4 className="font-bold text-gray-900 text-xs mt-1.5 leading-snug">
-                  {plan.title}
-                </h4>
-                <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                  {plan.description}
-                </p>
-              </div>
+                {/* Metrics & Signature Status */}
+                <div className="pt-2 border-t border-gray-100 text-xs space-y-2">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-500">Beneficio Anual PEA:</span>
+                    <strong className="text-emerald-700 font-mono">
+                      -{formatMXN(plan.expectedPEAReductionMXN)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-500">Reducción PMA:</span>
+                    <strong className="text-orange-700 font-mono">
+                      -{formatMXN(plan.expectedPMAReductionMXN)}
+                    </strong>
+                  </div>
 
-              {/* Metrics & Signature Status */}
-              <div className="pt-2 border-t border-gray-100 text-xs space-y-2">
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-gray-500">Beneficio Anual PEA:</span>
-                  <strong className="text-emerald-700 font-mono">
-                    -{formatMXN(plan.expectedPEAReductionMXN)}
-                  </strong>
-                </div>
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-gray-500">Reducción PMA:</span>
-                  <strong className="text-orange-700 font-mono">
-                    -{formatMXN(plan.expectedPMAReductionMXN)}
-                  </strong>
-                </div>
-
-                {/* Evidences summary if any */}
-                {plan.evidences && plan.evidences.length > 0 && (
-                  <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[10px] space-y-1">
-                    <div className="flex items-center gap-1 text-gray-700 font-semibold">
-                      <Paperclip className="w-3 h-3 text-[#3299A8]" />
-                      <span>{plan.evidences.length} Evidencia(s) SHA-256 vinculadas</span>
-                    </div>
-                    {plan.evidences.slice(0, 2).map((ev: any) => (
-                      <div key={ev.id} className="text-gray-500 truncate font-mono">
-                        {ev.fileName} <span className="text-gray-400">({ev.fileHashSha256.slice(0, 10)}...)</span>
+                  {/* Evidences summary if any */}
+                  {plan.evidences && plan.evidences.length > 0 && (
+                    <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[10px] space-y-1">
+                      <div className="flex items-center gap-1 text-gray-700 font-semibold">
+                        <Paperclip className="w-3 h-3 text-[#3299A8]" />
+                        <span>{plan.evidences.length} Evidencia(s) SHA-256 vinculadas</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {plan.evidences.slice(0, 2).map((ev: any) => (
+                        <div key={ev.id} className="text-gray-500 truncate font-mono">
+                          {ev.fileName} <span className="text-gray-400">({ev.fileHashSha256.slice(0, 10)}...)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-1.5">
-                    {plan.signedByBusinessHead ? (
-                      <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Firmado por Titular</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-orange-700 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>Firma Pendiente</span>
-                      </span>
-                    )}
-                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      {plan.signedByBusinessHead ? (
+                        <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Firmado por Titular</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-orange-700 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>Firma Pendiente</span>
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        setSelectedPlanForEvidence(plan);
-                        setIsEvidenceModalOpen(true);
-                      }}
-                      className="text-[10px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1 transition-colors border"
-                      title="Adjuntar evidencia de remediación y sellar con hash SHA-256"
-                    >
-                      <Paperclip className="w-3 h-3 text-[#3299A8]" />
-                      <span>+ Evidencia</span>
-                    </button>
-
-                    {!plan.signedByBusinessHead && (
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => handleSignPlan(plan.id)}
-                        className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 transition-colors"
+                        onClick={() => {
+                          setSelectedPlanForEvidence(plan);
+                          setIsEvidenceModalOpen(true);
+                        }}
+                        className="text-[10px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1 transition-colors border"
+                        title="Adjuntar evidencia de remediación y sellar con hash SHA-256"
                       >
-                        <PenTool className="w-3 h-3 text-[#C0D725]" />
-                        <span>Firmar</span>
+                        <Paperclip className="w-3 h-3 text-[#3299A8]" />
+                        <span>+ Evidencia</span>
                       </button>
-                    )}
+
+                      {!plan.signedByBusinessHead && (
+                        <button
+                          onClick={() => handleSignPlan(plan.id)}
+                          className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 transition-colors"
+                        >
+                          <PenTool className="w-3 h-3 text-[#C0D725]" />
+                          <span>Firmar</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ALL ACTION PLANS TABLE */}
       <div className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
         <div className="bg-[#1F242B] text-white px-5 py-3 flex items-center justify-between">
-          <h3 className="text-sm font-bold font-serif">
-            Inventario Completo de Planes de Acción de Banco B×+
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold font-serif">
+              Inventario Completo de Planes de Acción de Banco B×+
+            </h3>
+            {selectedProcessId !== "ALL" && (
+              <span className="text-[10px] font-mono bg-[#C0D725] text-[#1F242B] font-bold px-2 py-0.5 rounded">
+                Filtrado
+              </span>
+            )}
+          </div>
           <span className="text-xs text-gray-300">
-            {plans.length} Planes Registrados
+            {filteredPlans.length} Planes Mostrados
           </span>
         </div>
 
@@ -380,7 +462,7 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               <tr>
                 <th className="py-2.5 px-4 w-28">Código</th>
                 <th className="py-2.5 px-4">Iniciativa / Plan de Acción</th>
-                <th className="py-2.5 px-4">Riesgo Vinculado</th>
+                <th className="py-2.5 px-4">Riesgo & Proceso / Nodo</th>
                 <th className="py-2.5 px-4 text-center">Mejora Estimada</th>
                 <th className="py-2.5 px-4 text-center">Plazo</th>
                 <th className="py-2.5 px-4 text-center">Firma Titular</th>
@@ -389,7 +471,7 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {plans.map((p) => (
+              {filteredPlans.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50/80 transition-colors">
                   <td className="py-3 px-4 font-mono font-bold text-gray-600">
                     {p.code}
@@ -401,14 +483,32 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-medium text-gray-800">{p.riskEvent?.title}</div>
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${getZoneBadgeClasses(
-                        p.riskEvent?.residualZone
-                      )}`}
-                    >
-                      {p.riskEvent?.residualZone}
-                    </span>
+                    <div className="font-medium text-gray-900">{p.riskEvent?.title}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${getZoneBadgeClasses(
+                          p.riskEvent?.residualZone
+                        )}`}
+                      >
+                        {p.riskEvent?.residualZone}
+                      </span>
+                      {p.riskEvent?.process && (
+                        <span
+                          className="text-[9px] font-mono text-[#3299A8] bg-cyan-50/90 px-1.5 py-0.5 rounded border border-cyan-200 truncate max-w-[140px]"
+                          title={p.riskEvent.process.name}
+                        >
+                          {p.riskEvent.process.code}
+                        </span>
+                      )}
+                      {p.riskEvent?.processNode && (
+                        <span className="text-[9px] font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 flex items-center gap-1">
+                          <Workflow className="w-2.5 h-2.5 text-gray-500" />
+                          <span className="truncate max-w-[130px]" title={p.riskEvent.processNode.label}>
+                            {p.riskEvent.processNode.label}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span className="font-bold font-mono text-emerald-700 text-xs">
@@ -482,11 +582,13 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               <div>
                 <label className="font-bold text-gray-700 block mb-1">Riesgo a Mitigar (Matriz Viva):</label>
                 <CustomSelect
-                  options={risks.map((r) => ({
-                    value: r.id,
-                    label: `${r.code} - ${r.title}`,
-                    badge: `${r.residualZone} (${formatMXN(r.expectedAnnualLossPEA)})`,
-                  }))}
+                  options={risks
+                    .filter((r) => selectedProcessId === "ALL" || r.processId === selectedProcessId)
+                    .map((r) => ({
+                      value: r.id,
+                      label: `${r.code} - ${r.title}`,
+                      badge: `${r.residualZone} (${r.process?.code || "TRANS"} • ${r.processNode?.label || "General"})`,
+                    }))}
                   value={selectedRiskId}
                   onChange={setSelectedRiskId}
                   theme="light"
@@ -560,7 +662,7 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Plazo (Días):</label>
+                  <label className="font-bold text-gray-700 block mb-1">Tiempo de Implem. (Días):</label>
                   <input
                     type="number"
                     value={estimatedDays}
@@ -570,47 +672,56 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
                 </div>
               </div>
 
-              {/* Live Preview Box with Quick-Win detection */}
-              <div className="bg-gradient-to-r from-emerald-50 to-lime-50/50 p-3 rounded-lg border border-emerald-200 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-900 text-xs">
-                    Previsualización del Beneficio Cuantitativo:
+              {/* Live Preview Card */}
+              <div
+                className={`p-3 rounded-lg border text-xs space-y-1 ${
+                  liveIsQuickWin
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                    : "bg-gray-50 border-gray-200 text-gray-800"
+                }`}
+              >
+                <div className="flex items-center justify-between font-bold">
+                  <div className="flex items-center gap-1.5">
+                    {liveIsQuickWin && <Zap className="w-4 h-4 fill-emerald-600 text-emerald-600" />}
+                    <span>
+                      {liveIsQuickWin
+                        ? "¡Califica para Cuadrante QUICK-WIN!"
+                        : "Iniciativa de Mitigación Estándar"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px]">
+                    Impacto: {(improvementPct * 100).toFixed(0)}%
                   </span>
-                  {liveIsQuickWin ? (
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-900 bg-emerald-100/90 px-2.5 py-0.5 rounded-[3px] border border-emerald-300 uppercase tracking-wide">
-                      <Zap className="w-3 h-3 fill-emerald-600" />
-                      Califica como Quick-Win (&star;)
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-gray-500 bg-white px-1.5 py-0.5 rounded border">
-                      Plan Estándar (No Quick-Win)
-                    </span>
-                  )}
                 </div>
+                <p className="text-[11px] text-gray-600">
+                  {liveIsQuickWin
+                    ? "Alta rentabilidad: Reducción superior al 60% de pérdidas con esfuerzo bajo (<= 90 días)."
+                    : "Iniciativa con horizonte de largo plazo o inversión superior a escala baja."}
+                </p>
                 <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
                   <div>
-                    <span className="text-gray-500 block text-[10px]">Ahorro Anual PEA:</span>
+                    <span className="text-gray-500">Reducción PEA: </span>
                     <strong className="text-emerald-700">-{formatMXN(livePEAReduction)}</strong>
                   </div>
                   <div>
-                    <span className="text-gray-500 block text-[10px]">Reducción Pérdida Máxima (PMA):</span>
+                    <span className="text-gray-500">Reducción PMA: </span>
                     <strong className="text-orange-700">-{formatMXN(livePMAReduction)}</strong>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsNewPlanModalOpen(false)}
-                  className="px-3.5 py-1.5 text-xs text-gray-600 hover:text-gray-900 border rounded"
+                  className="px-4 py-2 border rounded font-semibold text-gray-600 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPlan}
-                  className="px-4 py-1.5 text-xs bg-[#1F242B] text-white font-bold rounded hover:bg-[#2A313C] disabled:opacity-50"
+                  className="px-5 py-2 bg-[#1F242B] hover:bg-[#2A313C] text-white rounded font-bold transition-colors disabled:opacity-50"
                 >
                   {submittingPlan ? "Guardando..." : "Crear y Cuantificar Plan"}
                 </button>
@@ -627,11 +738,14 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
             <div className="flex items-start justify-between pb-3 border-b border-gray-200">
               <div>
                 <span className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
-                  Sello Criptográfico Inalterable
+                  Sello Criptográfico CNBV
                 </span>
                 <h3 className="text-base font-bold text-gray-900 font-serif">
-                  Adjuntar Evidencia de Control (SHA-256)
+                  Adjuntar Evidencia de Remediación
                 </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Plan: {selectedPlanForEvidence.code} — {selectedPlanForEvidence.title}
+                </p>
               </div>
               <button
                 onClick={() => setIsEvidenceModalOpen(false)}
@@ -641,58 +755,54 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               </button>
             </div>
 
-            <div className="bg-gray-50 p-2.5 rounded text-xs text-gray-600 space-y-0.5">
-              <div><strong>Plan:</strong> {selectedPlanForEvidence.code} — {selectedPlanForEvidence.title}</div>
-            </div>
-
             <form onSubmit={handleUploadEvidence} className="space-y-3.5 text-xs">
               <div>
                 <label className="font-bold text-gray-700 block mb-1">Nombre del Archivo / Documento:</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Dictamen_Seguridad_Biometria_2026.pdf"
+                  placeholder="Ej. Acta_Comite_Auditoria_Remediacion_v2.pdf"
                   value={evidenceFileName}
                   onChange={(e) => setEvidenceFileName(e.target.value)}
-                  className="w-full p-2 border rounded outline-none focus:ring-1 focus:ring-[#3299A8]"
+                  className="w-full p-2 border rounded font-mono text-xs outline-none focus:ring-1 focus:ring-[#3299A8]"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1">Notas / Observaciones de Validación:</label>
+                <label className="font-bold text-gray-700 block mb-1">Comentarios / Observaciones de Auditoría:</label>
                 <textarea
-                  rows={2}
-                  placeholder="Descripción del entregable o enlace a repositorio de evidencias de auditoría..."
+                  rows={3}
+                  placeholder="Describa la prueba de efectividad del control, fechas de validación o referencias a minutas..."
                   value={evidenceComments}
                   onChange={(e) => setEvidenceComments(e.target.value)}
-                  className="w-full p-2 border rounded outline-none"
+                  className="w-full p-2 border rounded text-xs outline-none"
                 />
               </div>
 
-              <div className="bg-[#1F242B] text-gray-300 p-3 rounded text-[11px] space-y-1 font-mono">
-                <div className="flex items-center gap-1.5 text-[#C0D725] font-bold">
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Generador de Huella SHA-256 Automático</span>
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded text-[11px] text-slate-700 space-y-1">
+                <div className="font-bold text-slate-900 flex items-center gap-1">
+                  <ShieldCheck className="w-4 h-4 text-[#3299A8]" />
+                  <span>Sello Inalterable CUB Art. 88</span>
                 </div>
-                <p className="text-[10px] text-gray-400">
-                  Al confirmar, se creará un registro sellado en el repositorio inalterable y se registrará en el bloque audit trail de Banco B×+.
+                <p className="text-slate-600">
+                  Al subir el archivo, el sistema computará un hash criptográfico SHA-256 único y registrará el sello de tiempo en la bitácora inalterable del banco.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsEvidenceModalOpen(false)}
-                  className="px-3.5 py-1.5 text-xs text-gray-600 hover:text-gray-900 border rounded"
+                  className="px-4 py-2 border rounded font-semibold text-gray-600 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submittingEvidence}
-                  className="px-4 py-1.5 text-xs bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold rounded disabled:opacity-50"
+                  className="px-5 py-2 bg-[#1F242B] hover:bg-[#2A313C] text-white rounded font-bold transition-colors disabled:opacity-50"
                 >
-                  {submittingEvidence ? "Generando Sello..." : "Sellar y Vincular Evidencia"}
+                  {submittingEvidence ? "Sellando Evidencia..." : "Registrar y Sellar SHA-256"}
                 </button>
               </div>
             </form>

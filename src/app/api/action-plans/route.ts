@@ -12,7 +12,12 @@ export async function GET() {
         riskEvent: {
           include: {
             businessUnit: true,
-            process: true,
+            process: {
+              include: {
+                macroProcess: true,
+              },
+            },
+            processNode: true,
           },
         },
         control: true,

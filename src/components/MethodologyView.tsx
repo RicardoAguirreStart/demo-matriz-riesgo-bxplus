@@ -34,6 +34,10 @@ import {
   FileText,
   HelpCircle,
   ExternalLink,
+  Gauge,
+  Clock,
+  Target,
+  ShieldCheck,
 } from "lucide-react";
 
 interface MethodologyViewProps {
@@ -42,7 +46,7 @@ interface MethodologyViewProps {
 
 export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<
-    "UNIVERSE" | "PILLARS" | "FORMULAS" | "GOVERNANCE" | "SANDBOX"
+    "UNIVERSE" | "RAF_FRAMEWORK" | "PILLARS" | "FORMULAS" | "GOVERNANCE" | "SANDBOX"
   >("UNIVERSE");
   const [selectedBlock, setSelectedBlock] = useState<"ALL" | "BLOCK_1" | "BLOCK_2" | "BLOCK_3">("ALL");
   const [conceptSearch, setConceptSearch] = useState("");
@@ -368,11 +372,11 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
         </div>
       </div>
 
-      {/* 5 Main Sub-Section Navigation Tabs */}
+      {/* 6 Main Sub-Section Navigation Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
         <button
           onClick={() => setActiveSubTab("UNIVERSE")}
-          className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "UNIVERSE"
               ? "bg-[#1F242B] text-white shadow-sm"
               : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
@@ -383,51 +387,63 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
         </button>
 
         <button
+          onClick={() => setActiveSubTab("RAF_FRAMEWORK")}
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === "RAF_FRAMEWORK"
+              ? "bg-[#1F242B] text-white shadow-sm ring-1 ring-[#C0D725]"
+              : "bg-white text-gray-700 hover:bg-lime-50 border border-gray-200 font-bold"
+          }`}
+        >
+          <Gauge className="w-3.5 h-3.5 text-[#C0D725]" />
+          <span>2. Marco RAF (Apetito al Riesgo CNBV)</span>
+        </button>
+
+        <button
           onClick={() => setActiveSubTab("PILLARS")}
-          className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "PILLARS"
               ? "bg-[#1F242B] text-white shadow-sm"
               : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
           }`}
         >
           <Shield className="w-3.5 h-3.5 text-[#3299A8]" />
-          <span>2. Metodología Híbrida (5 Pilares)</span>
+          <span>3. Metodología Híbrida (5 Pilares)</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab("FORMULAS")}
-          className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "FORMULAS"
               ? "bg-[#1F242B] text-white shadow-sm"
               : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
           }`}
         >
           <Binary className="w-3.5 h-3.5 text-amber-500" />
-          <span>3. Formulario Matemático Auditable</span>
+          <span>4. Formulario Matemático Auditable</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab("GOVERNANCE")}
-          className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "GOVERNANCE"
               ? "bg-[#1F242B] text-white shadow-sm"
               : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
           }`}
         >
           <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
-          <span>4. Ciclo de Vida & Gobernanza 3LD</span>
+          <span>5. Ciclo de Vida & Gobernanza 3LD</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab("SANDBOX")}
-          className={`px-4 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "SANDBOX"
               ? "bg-[#C0D725] text-[#1F242B] shadow-sm font-extrabold"
               : "bg-white text-gray-700 hover:bg-lime-50 border border-gray-300"
           }`}
         >
           <Sliders className="w-3.5 h-3.5 text-[#1F242B]" />
-          <span>5. Calculadora en Vivo (Sandbox)</span>
+          <span>6. Calculadora en Vivo (Sandbox)</span>
         </button>
       </div>
 
@@ -550,7 +566,504 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-SECCIÓN 2: LOS 5 PILARES DE LA METODOLOGÍA HÍBRIDA */}
+      {/* SUB-SECCIÓN NUEVA: MARCO RAF (APETITO AL RIESGO CNBV - ART. 67, 68, 88 CUB) */}
+      {/* ========================================================================= */}
+      {activeSubTab === "RAF_FRAMEWORK" && (
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-[#1F242B] via-[#2A313C] to-[#1F242B] text-white rounded-bx p-6 shadow-card border-l-4 border-[#C0D725] space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold bg-[#C0D725] text-[#1F242B] px-2 py-0.5 rounded uppercase tracking-wider">
+                    Gobernanza CNBV & Basilea III
+                  </span>
+                  <span className="text-xs text-gray-300 font-mono">
+                    Circular Única de Bancos (CUB) • Artículos 67, 68 y 88
+                  </span>
+                </div>
+                <h3 className="text-lg md:text-xl font-bold font-serif text-white">
+                  Marco de Apetito al Riesgo (Risk Appetite Framework — RAF)
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded border border-white/10 text-xs">
+                <Gauge className="w-4 h-4 text-[#C0D725]" />
+                <span className="text-gray-200 font-medium">Aprobación Anual Consejo de Administración</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed max-w-4xl">
+              El <strong>Marco RAF</strong> es el conjunto integral de políticas, procesos, controles y límites prudenciales aprobados de forma indelegable por el Consejo de Administración de Banco Ve por Más (B×+). Define con precisión matemática el nivel de riesgo agregado y específico que la institución está dispuesta a asumir en la consecución de sus objetivos de negocio (Apetito), la desviación temporal que puede absorber sin comprometer su viabilidad (Tolerancia) y el límite máximo infranqueable antes de vulnerar los requerimientos legales de la CNBV y Banco de México (Capacidad).
+            </p>
+          </div>
+
+          {/* Pilares Normativos CUB / Basilea III / FSB */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-cyan-50 text-[#3299A8]">
+                  <Scale className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-xs font-serif">
+                    CUB Art. 67 & 68 (CNBV)
+                  </h4>
+                  <span className="text-[10px] text-gray-500 font-mono">Gobernanza & Aprobación</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Establece la estructura indelegable de supervisión: el Consejo de Administración aprueba el Apetito y los límites de exposición; el CAIR vigila su cumplimiento mensual; y la UAIR monitorea desviaciones en tiempo real con plena independencia de las líneas de negocio.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-lime-50 text-[#1F242B]">
+                  <ShieldCheck className="w-4 h-4 text-[#8BA816]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-xs font-serif">
+                    CUB Art. 88 (Independencia 3LD)
+                  </h4>
+                  <span className="text-[10px] text-gray-500 font-mono">2ª y 3ª Línea de Defensa</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Exige que la UAIR (2ª Línea) supervise de forma autónoma el cumplimiento de los límites y que la Dirección de Auditoría Interna (3ª Línea) valide de manera periódica que los motores de cálculo, las pruebas de estrés y la bitácora inalterable operen con rigor técnico.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-slate-100 text-slate-700">
+                  <BookOpen className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-xs font-serif">
+                    Estándares FSB & Basilea III
+                  </h4>
+                  <span className="text-[10px] text-gray-500 font-mono">Principles for Effective RAF</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Dicta la integración simbiótica entre el Apetito Cuantitativo (coeficientes de solvencia ICAP ≥ 10.5%, liquidez CCL ≥ 100%, apalancamiento) y el Apetito Cualitativo (cero tolerancia a brechas cibernéticas en SPEI, corrupción o riesgos reputacionales).
+              </p>
+            </div>
+          </div>
+
+          {/* LOS 4 ESCALONES JERÁRQUICOS ("EL VELOCÍMETRO PRUDENCIAL") */}
+          <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
+                  Arquitectura Prudencial Escalonada
+                </span>
+                <h3 className="text-base font-bold text-gray-900 font-serif">
+                  Los 4 Escalones Jerárquicos del Marco RAF (&quot;El Velocímetro Prudencial&quot;)
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded">
+                Art. 68 Frac. III CUB
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {/* Nivel 1: Apetito */}
+              <div className="bg-gradient-to-b from-emerald-50/70 to-white rounded-lg p-4 border-2 border-emerald-400 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-emerald-600 text-white px-2 py-0.5 rounded">
+                      NIVEL 1
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                      Score 5×5: 1 a 5
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm font-serif">
+                    🟢 Apetito al Riesgo
+                  </h4>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Nivel y composición del riesgo que Banco B×+ acepta asumir de manera voluntaria y ordinaria para generar valor y rentabilidad sustentable.
+                  </p>
+                </div>
+                <div className="bg-white p-2.5 rounded border border-emerald-200 text-[11px] space-y-1">
+                  <strong className="text-emerald-800 block text-[10px] uppercase tracking-wide">
+                    Protocolo de Gestión:
+                  </strong>
+                  <p className="text-gray-600">
+                    Monitoreo ordinario trimestral por la UAIR. Operación ordinaria de los Dueños del Proceso (1ª Línea) sin requerir planes extraordinarios.
+                  </p>
+                </div>
+              </div>
+
+              {/* Nivel 2: Alerta Temprana */}
+              <div className="bg-gradient-to-b from-amber-50/70 to-white rounded-lg p-4 border-2 border-amber-400 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-amber-500 text-white px-2 py-0.5 rounded">
+                      NIVEL 2
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                      Score 5×5: 6 a 11
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm font-serif">
+                    🟡 Alerta Temprana
+                  </h4>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Señal preventiva (<em>Early Warning Indicator</em>) de que un indicador o proceso se está desviando del apetito hacia la frontera de tolerancia.
+                  </p>
+                </div>
+                <div className="bg-white p-2.5 rounded border border-amber-200 text-[11px] space-y-1">
+                  <strong className="text-amber-800 block text-[10px] uppercase tracking-wide">
+                    Protocolo de Gestión:
+                  </strong>
+                  <p className="text-gray-600">
+                    Notificación automática a la UAIR (2ª Línea) y al Dueño del Proceso (1ª Línea) para ajuste preventivo y calibración inmediata de controles.
+                  </p>
+                </div>
+              </div>
+
+              {/* Nivel 3: Tolerancia */}
+              <div className="bg-gradient-to-b from-orange-50/70 to-white rounded-lg p-4 border-2 border-orange-500 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-orange-600 text-white px-2 py-0.5 rounded">
+                      NIVEL 3
+                    </span>
+                    <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded border border-orange-200">
+                      Score 5×5: 12 a 15
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm font-serif">
+                    🟠 Tolerancia al Riesgo
+                  </h4>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Desviación máxima admisible temporalmente bajo condiciones adversas o volatilidad sin poner en riesgo la continuidad de la operación del banco.
+                  </p>
+                </div>
+                <div className="bg-white p-2.5 rounded border border-orange-200 text-[11px] space-y-1">
+                  <strong className="text-orange-800 block text-[10px] uppercase tracking-wide">
+                    Protocolo Obligatorio CUB:
+                  </strong>
+                  <p className="text-gray-700 font-semibold">
+                    Plan de Acción obligatorio firmado por el Titular de Negocio en ≤ 5 días hábiles, con seguimiento quincenal en CAIR.
+                  </p>
+                </div>
+              </div>
+
+              {/* Nivel 4: Capacidad */}
+              <div className="bg-gradient-to-b from-rose-50/70 to-white rounded-lg p-4 border-2 border-rose-500 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded">
+                      NIVEL 4
+                    </span>
+                    <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded border border-rose-200">
+                      Score 5×5: 16 a 25
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 text-sm font-serif">
+                    🔴 Capacidad / Límite CNBV
+                  </h4>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Techo absoluto de exposición que el banco puede absorber antes de transgredir los mínimos legales de capitalización o liquidez regulatoria.
+                  </p>
+                </div>
+                <div className="bg-white p-2.5 rounded border border-rose-200 text-[11px] space-y-1">
+                  <strong className="text-rose-800 block text-[10px] uppercase tracking-wide">
+                    Protocolo de Escalamiento:
+                  </strong>
+                  <p className="text-rose-900 font-semibold">
+                    Escalamiento inmediato a CAIR, Director General y Consejo de Administración; activación de contingencia y freno de colocación.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* TABLA MAESTRA EN VIVO DE UMBRALES DEL MARCO RAF (BANCO B×+) */}
+          <div className="bg-white rounded-bx shadow-card border border-gray-200 overflow-hidden">
+            <div className="bg-[#1F242B] text-white px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-800">
+              <div>
+                <h3 className="text-sm font-bold font-serif">
+                  Tabla Maestra de Umbrales Prudenciales del Marco RAF — Banco B×+
+                </h3>
+                <p className="text-[11px] text-gray-300 mt-0.5">
+                  Calibración oficial conforme al CUB de la CNBV, Banco de México y Basilea III
+                </p>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-[#C0D725] text-[#1F242B] px-2.5 py-1 rounded uppercase tracking-wider">
+                Vigencia 2026
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F5F7F9] text-gray-600 font-semibold border-b border-gray-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Dimensión Prudencial</th>
+                    <th className="py-3 px-4">Base Regulatoria</th>
+                    <th className="py-3 px-4 text-center bg-emerald-50/50 text-emerald-900">🟢 Apetito (Verde)</th>
+                    <th className="py-3 px-4 text-center bg-amber-50/50 text-amber-900">🟡 Alerta Preventiva (Amarillo)</th>
+                    <th className="py-3 px-4 text-center bg-orange-50/50 text-orange-900">🟠 Tolerancia (Naranja)</th>
+                    <th className="py-3 px-4 text-center bg-rose-50/50 text-rose-900">🔴 Capacidad / Límite (Rojo)</th>
+                    <th className="py-3 px-4 text-center">Estatus Actual B×+</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {/* ICAP */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Índice de Capitalización (ICAP)</div>
+                      <span className="text-[10px] text-gray-400 font-normal">Capital Neto / APR Totales</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      CUB Art. 2 Bis 1 • Basilea III
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      ≥ 13.5%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      12.0% – 13.4%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      10.8% – 11.9%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      &lt; 10.5% (Mínimo CNBV)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        14.20% (Apetito)
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* CET1 */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Capital Fundamental (CET1)</div>
+                      <span className="text-[10px] text-gray-400 font-normal">Capital Común Tier 1 / APR</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      CUB Anexo 1-O • Basilea III
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      ≥ 10.5%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      8.5% – 10.4%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      7.1% – 8.4%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      &lt; 7.0% (Límite Legal)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        11.15% (Apetito)
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* CCL */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Cobertura de Liquidez (CCL 30D)</div>
+                      <span className="text-[10px] text-gray-400 font-normal">ALAC / Salidas Netas a 30 Días</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      Circular 3/2012 Banxico / LCR
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      ≥ 120.0%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      110.0% – 119.9%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      100.0% – 109.9%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      &lt; 100.0% (Transgresión)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        148.5% (Apetito)
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* VaR */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Riesgo de Mercado (VaR 99% 1D)</div>
+                      <span className="text-[10px] text-gray-400 font-normal">Pérdida Máxima Diaria Cartera Neg.</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      CUB Título II Cap. IV
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      ≤ $15.0M MXN
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      $15.1M – $22.0M
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      $22.1M – $30.0M
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      &gt; $30.0M MXN (Techo)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                        $18.4M (Preventivo)
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* SPEI */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Disponibilidad SPEI</div>
+                      <span className="text-[10px] text-gray-400 font-normal">Uptime mensual infraestructura pagos</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      Circular 8/2019 Banxico
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      ≥ 99.90%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      99.50% – 99.89%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      99.00% – 99.49%
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      &lt; 99.00% (Incidente)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                        99.88% (Preventivo)
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* Matriz 5x5 */}
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900">
+                      <div>Matriz 5×5 (Riesgos de Procesos)</div>
+                      <span className="text-[10px] text-gray-400 font-normal">Score Residual P_res × I_res</span>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-600 text-[11px]">
+                      CUB Art. 65 • Metodología B×+
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-emerald-700 bg-emerald-50/30">
+                      1 – 5 pts
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 bg-amber-50/30">
+                      6 – 11 pts
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-orange-700 bg-orange-50/30">
+                      12 – 15 pts (Plan ≤ 5d)
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-bold text-rose-700 bg-rose-50/30">
+                      16 – 25 pts (CAIR)
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
+                        Evaluación Continua
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* CONEXIÓN INTERACTIVA CON EL RESTO DE LA HERRAMIENTA */}
+          <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 space-y-4">
+            <div>
+              <span className="text-[10px] font-mono text-[#3299A8] uppercase tracking-wider font-bold">
+                Ecosistema Integrado B×+
+              </span>
+              <h3 className="text-base font-bold text-gray-900 font-serif">
+                Conexión Operativa del Marco RAF con los Módulos de la Plataforma
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                El Marco RAF gobierna automáticamente el comportamiento de las alertas, la matriz de procesos y la formalización de mitigaciones:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Dashboard C-Level */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-gray-900 font-bold text-xs">
+                    <Activity className="w-4 h-4 text-[#3299A8]" />
+                    <span>Dashboard C-Level & Velocímetro</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Monitorea en tiempo real los medidores prudenciales (ICAP, CET1, CCL, VaR, SPEI). Cualquier indicador que cruce a zona amarilla o naranja dispara alertas push en el widget flotante institucional.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigateTab("dashboard")}
+                  className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold py-1.5 px-3 rounded flex items-center justify-center gap-1.5 transition-colors self-start"
+                >
+                  <span>Abrir Dashboard C-Level</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#C0D725]" />
+                </button>
+              </div>
+
+              {/* Card 2: Matriz 5x5 por Proceso */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-gray-900 font-bold text-xs">
+                    <Layers className="w-4 h-4 text-[#C0D725]" />
+                    <span>Matriz 5×5 por Proceso & Nodos</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Analiza la matriz 5×5 específica de cada proceso del banco o visualiza el mosaico comparativo de todos los procesos lado a lado, con trazabilidad directa nodo por nodo.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigateTab("heatmap")}
+                  className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold py-1.5 px-3 rounded flex items-center justify-center gap-1.5 transition-colors self-start"
+                >
+                  <span>Ver Matriz 5×5 por Proceso</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#C0D725]" />
+                </button>
+              </div>
+
+              {/* Card 3: Planes de Acción & Quick-Wins */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-gray-900 font-bold text-xs">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span>Planes de Acción & Cuadrante Quick-Wins</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Garantiza el cumplimiento del protocolo RAF: los riesgos en zona de tolerancia exigen planes de acción inmediatos firmados en ≤ 5 días hábiles y sellados con hash SHA-256.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigateTab("plans")}
+                  className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold py-1.5 px-3 rounded flex items-center justify-center gap-1.5 transition-colors self-start"
+                >
+                  <span>Ir a Planes & Quick-Wins</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#C0D725]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-SECCIÓN 3: LOS 5 PILARES DE LA METODOLOGÍA HÍBRIDA */}
       {/* ========================================================================= */}
       {activeSubTab === "PILLARS" && (
         <div className="space-y-5 animate-in fade-in-50 duration-200">

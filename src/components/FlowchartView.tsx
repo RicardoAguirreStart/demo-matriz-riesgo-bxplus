@@ -12,6 +12,8 @@ import {
   Handle,
   Position,
   NodeProps,
+  ReactFlowProvider,
+  useReactFlow,
   addEdge,
   Connection,
 } from "@xyflow/react";
@@ -31,6 +33,7 @@ import {
   Trash2,
   HelpCircle,
   ShieldAlert,
+  Maximize2,
 } from "lucide-react";
 
 // ============================================================================
@@ -238,9 +241,10 @@ const nodeTypes = {
 };
 
 // ============================================================================
-// 2. COMPONENTE PRINCIPAL FLOWCHART VIEW
+// 2. COMPONENTE PRINCIPAL FLOWCHART VIEW (INNER)
 // ============================================================================
-export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) {
+function FlowchartViewInner({ onOpenCopilot }: { onOpenCopilot: () => void }) {
+  const { fitView } = useReactFlow();
   const [processes, setProcesses] = useState<any[]>([]);
   const [selectedProcessId, setSelectedProcessId] = useState<string>("");
   const [activeProcess, setActiveProcess] = useState<any>(null);
@@ -337,6 +341,16 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
+
+  // Auto-ajustar vista del canvas cuando cargan o cambian las figuras del proceso
+  useEffect(() => {
+    if (nodes && nodes.length > 0) {
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.15, duration: 400 });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [nodes.length, selectedProcessId, fitView]);
 
   // 1. Cargar lista de procesos
   const refreshProcessList = useCallback(async (selectId?: string) => {
@@ -891,9 +905,10 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
   };
 
   // Anclar un riesgo detectado por el evaluador
-  const handleAnchorDetectedRisk = async (riskItem: any) => {
+  const handleAnchorDetectedRisk = async (riskItem: any, shouldReload: boolean = true) => {
     try {
       setAnchoringRiskId(riskItem.title);
+      const targetProcessId = activeProcess?.id || selectedProcessId;
       const res = await fetch("/api/risks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -905,7 +920,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
           taxonomyId: riskItem.taxonomyId,
           origin: "PROCESSES",
           businessUnitId: riskItem.businessUnitId || activeProcess?.macroProcess?.businessUnitId,
-          processId: activeProcess.id,
+          processId: targetProcessId,
           processNodeId: riskItem.processNodeId,
           inherentProbability: riskItem.inherentProbability || 3,
           inherentImpact: riskItem.inherentImpact || 4,
@@ -918,7 +933,12 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
       if (data.success) {
         setStatusBanner(`Riesgo "${riskItem.title}" anclado al nodo y a la Matriz Viva.`);
         setTimeout(() => setStatusBanner(null), 3000);
-        loadProcessDetail(selectedProcessId, sodAuditActive);
+        if (shouldReload) {
+          loadProcessDetail(targetProcessId, sodAuditActive);
+          setTimeout(() => {
+            fitView({ padding: 0.15, duration: 400 });
+          }, 200);
+        }
       }
     } catch (err) {
       console.error("Error anchoring detected risk:", err);
@@ -930,12 +950,18 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
   // Anclar todos los riesgos detectados
   const handleAnchorAllDetectedRisks = async () => {
     if (!evaluationResult?.detectedRisks) return;
+    const targetProcessId = activeProcess?.id || selectedProcessId;
     for (const r of evaluationResult.detectedRisks) {
-      await handleAnchorDetectedRisk(r);
+      await handleAnchorDetectedRisk(r, false);
     }
     setIsEvaluatorModalOpen(false);
     setStatusBanner("Todos los riesgos detectados han sido anclados al proceso y a la Matriz Viva.");
     setTimeout(() => setStatusBanner(null), 4000);
+    // Recargar el diagrama completo una sola vez al finalizar el anclaje masivo
+    loadProcessDetail(targetProcessId, sodAuditActive);
+    setTimeout(() => {
+      fitView({ padding: 0.15, duration: 400 });
+    }, 200);
   };
 
   // Auditar nodo individual con Copilot (Drawer)
@@ -1168,6 +1194,17 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                 {sodViolationsCount}
               </span>
             )}
+          </button>
+
+          {/* Botón: Centrar / Ajustar Vista */}
+          <button
+            type="button"
+            onClick={() => fitView({ padding: 0.15, duration: 400 })}
+            className="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            title="Ajustar y centrar todas las figuras del diagrama en pantalla"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-[#3299A8]" />
+            <span>Centrar Diagrama</span>
           </button>
 
           {/* Botón: Guardar Layout */}
@@ -2196,5 +2233,14 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper principal con ReactFlowProvider para soporte integral de fitView y auto-centrado
+export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) {
+  return (
+    <ReactFlowProvider>
+      <FlowchartViewInner onOpenCopilot={onOpenCopilot} />
+    </ReactFlowProvider>
   );
 }

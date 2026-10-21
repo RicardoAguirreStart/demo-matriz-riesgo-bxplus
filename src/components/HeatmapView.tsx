@@ -152,13 +152,13 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
   return (
     <div className="space-y-6 w-full">
       {/* 1. Header Principal y Selectores de Alcance de Análisis */}
-      <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-serif">
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
             Matriz de Riesgo 5×5 (Probabilidad vs. Impacto)
           </h2>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
-            <span className="font-medium text-gray-600">Semaforización CUB:</span>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-300 mt-1">
+            <span className="font-medium text-gray-300">Semaforización CUB:</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500 inline-block shadow-xs" /> Verde (1-4)
             </span>
@@ -177,7 +177,7 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
         {/* Controles de Vista: Selector de Alcance & Escenario 3-Way */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Selector de Nivel de Análisis (3 Modos) */}
-          <div className="flex items-center bg-[#F5F7F9] p-1 rounded-lg border border-gray-200 text-xs">
+          <div className="flex items-center bg-[#2A313C] p-1 rounded-lg border border-gray-700 text-xs">
             <button
               type="button"
               onClick={() => {
@@ -186,8 +186,8 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               }}
               className={`px-3 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 analysisScope === "SINGLE_PROCESS"
-                  ? "bg-[#1F242B] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#C0D725] text-[#1F242B] shadow-xs"
+                  : "text-gray-300 hover:text-white"
               }`}
               title="Ver Matriz 5×5 dedicada por cada proceso bancario y su mapa de trazabilidad"
             >
@@ -201,8 +201,8 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               }}
               className={`px-3 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 analysisScope === "MOSAIC"
-                  ? "bg-[#1F242B] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#C0D725] text-[#1F242B] shadow-xs"
+                  : "text-gray-300 hover:text-white"
               }`}
               title="Comparar todas las matrices 5×5 de los procesos bancarios en mosaico lado a lado"
             >
@@ -216,8 +216,8 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               }}
               className={`px-3 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 analysisScope === "INSTITUTIONAL"
-                  ? "bg-[#1F242B] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#C0D725] text-[#1F242B] shadow-xs"
+                  : "text-gray-300 hover:text-white"
               }`}
               title="Matriz consolidada con todos los riesgos del banco"
             >
@@ -226,7 +226,7 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
           </div>
 
           {/* 3-Way Scenario Switch (Inherente / Residual / Objetivo) */}
-          <div className="flex items-center bg-[#F5F7F9] p-1 rounded-lg border border-gray-200 text-xs">
+          <div className="flex items-center bg-[#2A313C] p-1 rounded-lg border border-gray-700 text-xs">
             <button
               type="button"
               onClick={() => {
@@ -235,8 +235,8 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               }}
               className={`px-2.5 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 viewMode === "INHERENT"
-                  ? "bg-[#1F242B] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#C0D725] text-[#1F242B] shadow-xs"
+                  : "text-gray-300 hover:text-white"
               }`}
             >
               1. Inherente
@@ -250,7 +250,7 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
               className={`px-2.5 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 viewMode === "RESIDUAL"
                   ? "bg-[#C0D725] text-[#1F242B] shadow-xs font-black"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-gray-300 hover:text-white"
               }`}
             >
               2. Residual Actual
@@ -261,14 +261,13 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
                 setViewMode("TARGET");
                 setSelectedCell(null);
               }}
-              className={`px-2.5 py-1.5 font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1.5 font-bold rounded-md transition-all cursor-pointer ${
                 viewMode === "TARGET"
-                  ? "bg-[#3299A8] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-[#C0D725] text-[#1F242B] shadow-xs font-bold"
+                  : "text-gray-300 hover:text-white"
               }`}
             >
-              <Zap className="w-3 h-3" />
-              <span>3. Objetivo</span>
+              3. Objetivo
             </button>
           </div>
         </div>

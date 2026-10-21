@@ -54,24 +54,24 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
         </div>
       )}
 
-      {/* Header and Sub-tabs */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Header and Sub-tabs (Diseño Estándar B×+) */}
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-serif">
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
             Módulo Regulatorio de Supervisión e Integridad Criptográfica
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
             Cumplimiento normativo de la Serie R24, Portafolio Global de Juicios, Art. 88 CUB y Audit Trail
           </p>
         </div>
 
-        <div className="flex flex-wrap bg-[#F5F7F9] p-1 rounded-lg border border-gray-200 text-xs">
+        <div className="flex flex-wrap bg-[#2A313C] p-1 rounded-lg border border-gray-700 text-xs">
           <button
             onClick={() => setActiveReportTab("R24")}
             className={`px-3 py-1.5 font-bold rounded-md transition-all ${
               activeReportTab === "R24"
-                ? "bg-[#1F242B] text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-[#C0D725] text-[#1F242B]"
+                : "text-gray-300 hover:text-white"
             }`}
           >
             Serie R24 (Canales)
@@ -80,8 +80,8 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
             onClick={() => setActiveReportTab("LEGAL")}
             className={`px-3 py-1.5 font-bold rounded-md transition-all ${
               activeReportTab === "LEGAL"
-                ? "bg-[#1F242B] text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-[#C0D725] text-[#1F242B]"
+                : "text-gray-300 hover:text-white"
             }`}
           >
             Portafolio de Juicios
@@ -90,8 +90,8 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
             onClick={() => setActiveReportTab("ART88")}
             className={`px-3 py-1.5 font-bold rounded-md transition-all ${
               activeReportTab === "ART88"
-                ? "bg-[#1F242B] text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-[#C0D725] text-[#1F242B]"
+                : "text-gray-300 hover:text-white"
             }`}
           >
             Informe Art. 88 CUB
@@ -101,7 +101,7 @@ export function RegulatoryReportsView({ currentRole }: RegulatoryReportsViewProp
             className={`px-3 py-1.5 font-bold rounded-md transition-all flex items-center gap-1 ${
               activeReportTab === "AUDIT"
                 ? "bg-[#3299A8] text-white"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-gray-300 hover:text-white"
             }`}
           >
             <Hash className="w-3.5 h-3.5" />

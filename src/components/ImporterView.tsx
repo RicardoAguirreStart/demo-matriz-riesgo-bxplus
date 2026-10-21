@@ -274,13 +274,13 @@ CR-PYME-105,PYME,6000000,5000000,0.05,0.15,0,0.020,0.40,20`,
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header (Diseño Estándar B×+) */}
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-serif">
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
             Importador Inteligente de Layouts Excel / CSV
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
             Carga real, previsualización asistida y validación automatizada conforme a CUB, NIF C-16 y SHCP
           </p>
         </div>
@@ -288,9 +288,9 @@ CR-PYME-105,PYME,6000000,5000000,0.05,0.15,0,0.020,0.40,20`,
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleDownloadTemplate(selectedLayout)}
-            className="bg-white border border-gray-300 hover:border-[#3299A8] text-gray-700 text-xs font-medium px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm"
+            className="bg-[#292F38] hover:bg-[#343C47] text-gray-200 border border-gray-700 text-xs font-medium px-3.5 py-2 rounded-md flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 text-[#3299A8]" />
+            <Download className="w-3.5 h-3.5 text-[#C0D725]" />
             <span>Descargar Plantilla CSV Oficial</span>
           </button>
         </div>

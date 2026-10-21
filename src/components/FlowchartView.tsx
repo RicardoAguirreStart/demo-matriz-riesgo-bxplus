@@ -1401,15 +1401,15 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
 
       {/* Main Process Subheader & Control Toolbar */}
       <div className="bg-white rounded-bx shadow-card border border-gray-200 w-full relative z-30">
-        {/* Tier 1: Identidad del Proceso + Acciones Estratégicas de IA */}
-        <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Tier 1: Identidad del Proceso + Acciones Estratégicas de IA (Diseño Estándar B×+) */}
+        <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white p-5 rounded-t-bx border-l-4 border-[#C0D725] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Izquierda: Título y Descripción */}
           <div className="space-y-1 min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 font-serif">
-              {activeProcess?.name || "Selecciona un Proceso Bancario"}
+            <h2 className="text-xl font-bold font-serif text-white tracking-tight">
+              {activeProcess?.name ? `Diagramador de Procesos: ${activeProcess.name}` : "Diagramador de Procesos Bancarios"}
             </h2>
             {activeProcess?.description && (
-              <p className="text-xs text-gray-500 max-w-4xl line-clamp-1">
+              <p className="text-xs text-gray-300 max-w-4xl line-clamp-1">
                 {activeProcess.description}
               </p>
             )}
@@ -1431,7 +1431,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
             <button
               type="button"
               onClick={handleRunFullProcessEvaluation}
-              className="bg-[#1F242B] hover:bg-[#2A313C] text-white font-bold text-xs px-3.5 py-2 rounded shadow-xs transition-colors border border-gray-700 cursor-pointer"
+              className="bg-[#292F38] hover:bg-[#343C47] text-gray-200 border border-gray-700 font-bold text-xs px-3.5 py-2 rounded shadow-xs transition-colors cursor-pointer"
               title="Auditoría integral con IA y contexto transversal de todos los procesos de B×+"
             >
               Evaluador Riesgos IA

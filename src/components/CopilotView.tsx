@@ -403,15 +403,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
       {/* Top Banner de Cabecera */}
       <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-[#C0D725] uppercase tracking-wider bg-black/30 px-2 py-0.5 rounded font-bold">
-              Simulador por Procesos & Nodos • CUB Art. 65, 88 & Anexo 12-B / 12-D
-            </span>
-            <span className="text-xs text-gray-300">Google Gemini 2.5 Flash</span>
-          </div>
-          <h2 className="text-xl font-bold font-serif mt-1 text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#C0D725]" />
-            <span>Simulador de Pruebas de Estrés por Proceso, Nodo y Riesgo</span>
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
+            Simulador de Pruebas de Estrés por Proceso, Nodo y Riesgo
           </h2>
           <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
             Modela el impacto de choques macroeconómicos, climáticos, interrupciones SPEI y fallas de control interno sobre los procesos bancarios de Banco Ve por Más (B×+), contrastando la Matriz 5×5 Actual vs. Estresada y activando Planes de Contingencia.
@@ -452,9 +445,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
           <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 space-y-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="w-full lg:w-96 space-y-1">
-                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Workflow className="w-3.5 h-3.5 text-[#3299A8]" />
-                  <span>1. Seleccionar Proceso Bancario a Estresar:</span>
+                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
+                  1. Seleccionar Proceso Bancario a Estresar:
                 </label>
                 <CustomSelect
                   value={selectedProcessId}
@@ -472,9 +464,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
 
               {/* Botones de Presets de 1 Clic */}
               <div className="flex-1 space-y-1">
-                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Escenarios Preconfigurados de Estrés (1 Clic):</span>
+                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                  Escenarios Preconfigurados de Estrés (1 Clic):
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
                   <button
@@ -482,8 +473,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     onClick={() => handleApplyPreset("AGRO")}
                     className="p-2 rounded border text-left transition-all hover:border-[#3299A8] hover:shadow-xs bg-emerald-50/50 border-emerald-200 cursor-pointer"
                   >
-                    <div className="text-[11px] font-bold text-emerald-950 flex items-center gap-1">
-                      <span>🌾 Sequía + TIIE Agro</span>
+                    <div className="text-[11px] font-bold text-emerald-950">
+                      Sequía + TIIE Agro
                     </div>
                     <div className="text-[9px] text-emerald-800 line-clamp-1">
                       Sequía 90%, TIIE 14.5%, PR-AGRO-01
@@ -495,8 +486,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     onClick={() => handleApplyPreset("TECH")}
                     className="p-2 rounded border text-left transition-all hover:border-[#3299A8] hover:shadow-xs bg-purple-50/50 border-purple-200 cursor-pointer"
                   >
-                    <div className="text-[11px] font-bold text-purple-950 flex items-center gap-1">
-                      <span>🛡️ Ciberataque + SPEI 8h</span>
+                    <div className="text-[11px] font-bold text-purple-950">
+                      Ciberataque + SPEI 8h
                     </div>
                     <div className="text-[9px] text-purple-800 line-clamp-1">
                       Caída SPEI 8 hrs + Falla Controles 70%
@@ -508,8 +499,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     onClick={() => handleApplyPreset("RECESSION")}
                     className="p-2 rounded border text-left transition-all hover:border-[#3299A8] hover:shadow-xs bg-rose-50/50 border-rose-200 cursor-pointer"
                   >
-                    <div className="text-[11px] font-bold text-rose-950 flex items-center gap-1">
-                      <span>📉 Recesión Severa -6%</span>
+                    <div className="text-[11px] font-bold text-rose-950">
+                      Recesión Severa -6%
                     </div>
                     <div className="text-[9px] text-rose-800 line-clamp-1">
                       PIB -6%, FX +30%, TIIE 16%, Todo el banco
@@ -521,8 +512,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
                     onClick={() => handleApplyPreset("CONTROLS")}
                     className="p-2 rounded border text-left transition-all hover:border-[#3299A8] hover:shadow-xs bg-amber-50/50 border-amber-200 cursor-pointer"
                   >
-                    <div className="text-[11px] font-bold text-amber-950 flex items-center gap-1">
-                      <span>⚠️ Colapso Controles (NF)</span>
+                    <div className="text-[11px] font-bold text-amber-950">
+                      Colapso Controles (NF)
                     </div>
                     <div className="text-[9px] text-amber-800 line-clamp-1">
                       Degradación 80% hacia Inmanente

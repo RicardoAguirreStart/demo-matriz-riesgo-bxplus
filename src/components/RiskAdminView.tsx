@@ -358,29 +358,29 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
         </div>
       )}
 
-      {/* Header and Controls */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header and Controls (Diseño Estándar B×+) */}
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 font-serif">
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
             Catálogo Integral y Gobernanza de las 3 Líneas de Defensa
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
             Estructuración obligatoria CNBV: Causa Raíz &rarr; Evento de Riesgo &rarr; Consecuencia Financiera
           </p>
         </div>
 
         {isInternalAudit ? (
-          <div className="bg-slate-100 border border-slate-300 text-slate-700 text-xs px-3.5 py-2 rounded-md flex items-center gap-2 font-medium">
-            <Lock className="w-4 h-4 text-slate-500" />
+          <div className="bg-[#292F38] border border-gray-700 text-gray-300 text-xs px-3.5 py-2 rounded-md flex items-center gap-2 font-medium">
+            <Lock className="w-4 h-4 text-[#C0D725]" />
             <span>Modo Auditoría 3ª Línea (Solo Lectura — CUB Art. 88)</span>
           </div>
         ) : (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+            className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors self-start sm:self-auto cursor-pointer"
           >
-            <Plus className="w-4 h-4 text-[#C0D725]" />
-            <span>+ Dar de Alta Nuevo Riesgo</span>
+            <Plus className="w-4 h-4 text-[#1F242B]" />
+            <span>Dar de Alta Nuevo Riesgo</span>
           </button>
         )}
       </div>

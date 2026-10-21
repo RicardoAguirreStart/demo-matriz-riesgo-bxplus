@@ -841,83 +841,75 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
       )}
 
       {/* =========================================================================
-          CAPA 1: CABECERA, SELECTOR DE PROCESO, ACCIONES IA Y 4 KPIS DINÁMICOS
+          CAPA 1: CABECERA EJECUTIVA Y SELECTOR DE PROCESO (DISEÑO ESTÁNDAR B×+)
          ========================================================================= */}
-      <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-[#3299A8] font-bold uppercase tracking-wider">
-                Gobernanza CNBV CUB Art. 88 & 3 Líneas de Defensa
-              </span>
-              <span className="text-[10px] font-mono bg-[#1F242B] text-[#C0D725] px-2 py-0.2 rounded font-bold">
-                Taste Index B×+
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 font-serif mt-0.5">
-              Matriz de Priorización de Mitigación y Cuadrante Quick-Wins
-            </h2>
-            <p className="text-xs text-gray-600 mt-1 max-w-3xl leading-relaxed">
-              Cruce cuantitativo de Potencial de Reducción (&Delta;PEA%) frente a Esfuerzo/Plazo por Proceso
-              Bancario, formalización de controles y mitigación en tiempo real.
-            </p>
-          </div>
-
-          {/* Selector de Proceso & Botones de Acción */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-72 min-w-0">
-              <CustomSelect
-                options={processOptions}
-                value={selectedProcessId}
-                onChange={setSelectedProcessId}
-                theme="light"
-                placeholder="Seleccionar Proceso..."
-                className="w-full"
-                dropdownClassName="w-[420px]"
-              />
-            </div>
-
-            {/* Botón Sugerir Planes con IA */}
-            <button
-              type="button"
-              disabled={loadingAIProposals}
-              onClick={handleOpenAISuggestions}
-              className="bg-white border border-[#3299A8] hover:bg-cyan-50 text-[#1F242B] text-xs font-bold px-3 py-2 rounded-md shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-              title="Abrir Asistente IA Gemini para previsualizar y seleccionar propuestas de mitigación"
-            >
-              {loadingAIProposals ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3299A8]" />
-                  <span>Razonando con Gemini...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 text-[#3299A8]" />
-                  <span>Sugerir Planes con IA</span>
-                </>
-              )}
-            </button>
-
-            {/* Botón Nuevo Plan Manual */}
-            <button
-              type="button"
-              onClick={() => {
-                const firstOrphan = orphanRisks[0] || scopedRisks[0];
-                if (firstOrphan) {
-                  setSelectedRiskId(firstOrphan.id);
-                }
-                setIsNewPlanModalOpen(true);
-              }}
-              className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#C0D725]" />
-              <span>+ Nuevo Plan</span>
-            </button>
-          </div>
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
+            Matriz de Priorización de Mitigación y Cuadrante Quick-Wins
+          </h2>
+          <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
+            Cruce cuantitativo de Potencial de Reducción (&Delta;PEA%) frente a Esfuerzo/Plazo por Proceso
+            Bancario, formalización de controles y mitigación en tiempo real.
+          </p>
         </div>
 
-        {/* 4 TARJETAS KPI DINÁMICAS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
+        {/* Selector de Proceso & Botones de Acción */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="w-72 min-w-0">
+            <CustomSelect
+              options={processOptions}
+              value={selectedProcessId}
+              onChange={setSelectedProcessId}
+              theme="dark"
+              placeholder="Seleccionar Proceso..."
+              className="w-full"
+              dropdownClassName="w-[420px]"
+            />
+          </div>
+
+          {/* Botón Sugerir Planes con IA */}
+          <button
+            type="button"
+            disabled={loadingAIProposals}
+            onClick={handleOpenAISuggestions}
+            className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] text-xs font-bold px-3 py-2 rounded-md shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+            title="Abrir Asistente IA Gemini para previsualizar y seleccionar propuestas de mitigación"
+          >
+            {loadingAIProposals ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#1F242B]" />
+                <span>Razonando con Gemini...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-[#1F242B]" />
+                <span>Sugerir Planes con IA</span>
+              </>
+            )}
+          </button>
+
+          {/* Botón Nuevo Plan Manual */}
+          <button
+            type="button"
+            onClick={() => {
+              const firstOrphan = orphanRisks[0] || scopedRisks[0];
+              if (firstOrphan) {
+                setSelectedRiskId(firstOrphan.id);
+              }
+              setIsNewPlanModalOpen(true);
+            }}
+            className="bg-[#292F38] hover:bg-[#343C47] text-gray-200 border border-gray-700 text-xs font-bold px-3.5 py-2 rounded-md shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-[#C0D725]" />
+            <span>Nuevo Plan</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4 TARJETAS KPI DINÁMICAS */}
+      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* KPI 1: Cobertura de Mitigación */}
           <div className="bg-[#FAFBFD] p-3.5 rounded-lg border border-gray-200 space-y-1">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
@@ -1674,28 +1666,26 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
               <button
                 type="button"
                 onClick={() => setTableLayout("GROUPED")}
-                className={`px-2.5 py-1 rounded font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
                   tableLayout === "GROUPED"
                     ? "bg-[#C0D725] text-[#1F242B]"
                     : "text-gray-300 hover:text-white"
                 }`}
                 title="Agrupar planes por proceso bancario"
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Por Proceso</span>
+                Por Proceso
               </button>
               <button
                 type="button"
                 onClick={() => setTableLayout("FLAT")}
-                className={`px-2.5 py-1 rounded font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
                   tableLayout === "FLAT"
                     ? "bg-[#C0D725] text-[#1F242B]"
                     : "text-gray-300 hover:text-white"
                 }`}
                 title="Ver lista plana tabular de todos los planes"
               >
-                <TableIcon className="w-3.5 h-3.5" />
-                <span>Tabla Plana</span>
+                Tabla Plana
               </button>
             </div>
           </div>
@@ -1717,48 +1707,46 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
           <button
             type="button"
             onClick={() => setSelectedQuadrantFilter("Q1_QUICK_WIN")}
-            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap ${
               selectedQuadrantFilter === "Q1_QUICK_WIN"
                 ? "bg-emerald-600 text-white border-emerald-600"
                 : "bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50"
             }`}
           >
-            <Zap className="w-3 h-3 fill-emerald-600" />
-            <span>⚡ I. Quick-Wins ({q1Plans.length})</span>
+            I. Quick-Wins ({q1Plans.length})
           </button>
           <button
             type="button"
             onClick={() => setSelectedQuadrantFilter("Q2_STRUCTURAL")}
-            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap ${
               selectedQuadrantFilter === "Q2_STRUCTURAL"
                 ? "bg-[#3299A8] text-white border-[#3299A8]"
                 : "bg-white text-[#267C89] border-cyan-300 hover:bg-cyan-50"
             }`}
           >
-            <Building2 className="w-3 h-3" />
-            <span>🏗️ II. Estructurales Core ({q2Plans.length})</span>
+            II. Estructurales Core ({q2Plans.length})
           </button>
           <button
             type="button"
             onClick={() => setSelectedQuadrantFilter("Q3_TACTICAL")}
-            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap ${
               selectedQuadrantFilter === "Q3_TACTICAL"
                 ? "bg-amber-600 text-white border-amber-600"
                 : "bg-white text-amber-800 border-amber-300 hover:bg-amber-50"
             }`}
           >
-            <span>🔧 III. Mejoras Tácticas ({q3Plans.length})</span>
+            III. Mejoras Tácticas ({q3Plans.length})
           </button>
           <button
             type="button"
             onClick={() => setSelectedQuadrantFilter("Q4_LOW_PRIORITY")}
-            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded font-medium border transition-colors cursor-pointer whitespace-nowrap ${
               selectedQuadrantFilter === "Q4_LOW_PRIORITY"
                 ? "bg-gray-700 text-white border-gray-700"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
             }`}
           >
-            <span>⏸️ IV. Baja Prioridad ({q4Plans.length})</span>
+            IV. Baja Prioridad ({q4Plans.length})
           </button>
         </div>
 

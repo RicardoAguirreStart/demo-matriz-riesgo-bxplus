@@ -69,15 +69,7 @@ export function DashboardView({
       {/* Executive Welcome Banner */}
       <div className="bg-[#1F242B] text-white rounded-bx p-5 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-[#C0D725]">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-[#C0D725] uppercase tracking-wider bg-[#292F38] px-2 py-0.5 rounded">
-              Gobierno de Riesgos Bancarios CUB / CNBV
-            </span>
-            <span className="text-[11px] text-gray-400">
-              Corte al Cierre Activo 2026
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold font-serif tracking-tight mt-1 text-white">
+          <h1 className="text-xl sm:text-2xl font-bold font-serif tracking-tight text-white">
             Tablero Ejecutivo de Riesgos Relevantes y Marco RAF
           </h1>
           <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">

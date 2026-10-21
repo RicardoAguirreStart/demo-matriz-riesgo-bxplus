@@ -343,29 +343,29 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
 
   return (
     <div className="space-y-6 w-full">
-      {/* View Header */}
-      <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* View Header (Diseño Estándar B×+) */}
+      <div className="bg-gradient-to-r from-[#1F242B] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-gray-900 font-serif leading-tight">
+          <h2 className="text-xl font-bold font-serif text-white tracking-tight">
             Marco Teórico, Catálogo de Riesgos y Metodología Institucional
           </h2>
-          <p className="text-xs text-gray-500 leading-relaxed max-w-4xl">
+          <p className="text-xs text-gray-300 leading-relaxed max-w-4xl">
             Manual Ejecutivo interactivo para el Comité de Administración Integral de Riesgos (CAIR), la UAIR, Auditoría Interna y la Comisión Nacional Bancaria y de Valores (CNBV).
           </p>
         </div>
 
         {/* Global Concept Search Bar */}
-        <div className="flex items-center gap-2 bg-[#F5F7F9] border border-gray-300 rounded-lg px-3 py-1.5 min-w-[260px] max-w-sm">
+        <div className="flex items-center gap-2 bg-[#2A313C] border border-gray-700 rounded-lg px-3 py-1.5 min-w-[260px] max-w-sm">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <input
             type="text"
             placeholder="Buscar concepto (ej. CUB, NIF C-16, PEA, SoD, SPEI)..."
             value={conceptSearch}
             onChange={(e) => setConceptSearch(e.target.value)}
-            className="w-full bg-transparent outline-none text-xs text-gray-800 placeholder-gray-400"
+            className="w-full bg-transparent outline-none text-xs text-white placeholder-gray-400"
           />
           {conceptSearch && (
-            <button onClick={() => setConceptSearch("")} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => setConceptSearch("")} className="text-gray-400 hover:text-white">
               <span className="text-xs font-bold font-mono">✕</span>
             </button>
           )}

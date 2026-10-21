@@ -17,6 +17,7 @@ import {
   UploadCloud,
   FlaskConical,
   FileText,
+  BookOpen,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -47,6 +48,7 @@ export function Header({
     { id: "importer", label: "Importador Layouts", icon: UploadCloud },
     { id: "copilot", label: "Simulador de Estrés", icon: FlaskConical },
     { id: "reports", label: "Reportes & Audit Trail", icon: FileText },
+    { id: "methodology", label: "Marco Teórico & Metodología", icon: BookOpen },
   ];
 
   const businessLineOptions = BUSINESS_LINES_CONFIG.map((bl) => ({

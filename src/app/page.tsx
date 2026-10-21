@@ -13,6 +13,7 @@ import { ActionPlansView } from "@/components/ActionPlansView";
 import { ImporterView } from "@/components/ImporterView";
 import { CopilotView } from "@/components/CopilotView";
 import { RegulatoryReportsView } from "@/components/RegulatoryReportsView";
+import { MethodologyView } from "@/components/MethodologyView";
 import { BusinessLineBancoBx, RoleType } from "@/types";
 
 export default function Home() {
@@ -74,6 +75,10 @@ export default function Home() {
 
         {activeTab === "reports" && (
           <RegulatoryReportsView currentRole={currentRole} />
+        )}
+
+        {activeTab === "methodology" && (
+          <MethodologyView onNavigateTab={(tab) => setActiveTab(tab)} />
         )}
       </main>
 

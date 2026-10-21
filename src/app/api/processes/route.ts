@@ -14,7 +14,11 @@ export async function GET(request: Request) {
       const process = await prisma.process.findUnique({
         where: { id: processId },
         include: {
-          macroProcess: true,
+          macroProcess: {
+            include: {
+              businessUnit: true,
+            },
+          },
           owner: true,
           flowNodes: {
             include: {
@@ -80,7 +84,7 @@ export async function POST(request: Request) {
 
     // Acción 2: Agregar nuevo nodo al proceso
     if (action === "CREATE_NODE") {
-      const { processId, label, description, nodeType, creditStage, responsibleRole, systemUsed, positionX, positionY } = body;
+      const { processId, label, description, nodeType, creditStage, responsibleRole, systemUsed, positionX, positionY, styleConfig } = body;
       const newNode = await prisma.processNode.create({
         data: {
           processId,
@@ -92,6 +96,7 @@ export async function POST(request: Request) {
           systemUsed,
           positionX: Number(positionX) || 100,
           positionY: Number(positionY) || 100,
+          styleConfig: typeof styleConfig === "string" ? styleConfig : styleConfig ? JSON.stringify(styleConfig) : null,
         },
       });
       return NextResponse.json({ success: true, node: newNode });
@@ -105,11 +110,112 @@ export async function POST(request: Request) {
           processId,
           sourceNodeId,
           targetNodeId,
-          conditionLabel,
+          conditionLabel: conditionLabel || null,
           animated: true,
         },
       });
       return NextResponse.json({ success: true, edge: newEdge });
+    }
+
+    // Acción 4: Crear figura conectada automáticamente (Estilo Miro / Canva con botón "+")
+    if (action === "CREATE_CONNECTED_NODE") {
+      const {
+        processId,
+        sourceNodeId,
+        nodeType = "TASK_STEP",
+        label,
+        description,
+        responsibleRole,
+        systemUsed,
+        creditStage = "NOT_APPLICABLE",
+        conditionLabel,
+        positionX,
+        positionY,
+        styleConfig,
+      } = body;
+
+      const sourceNode = await prisma.processNode.findUnique({ where: { id: sourceNodeId } });
+      const nextX = positionX !== undefined ? Number(positionX) : sourceNode ? sourceNode.positionX + 320 : 200;
+      const nextY = positionY !== undefined ? Number(positionY) : sourceNode ? sourceNode.positionY : 100;
+
+      const newNode = await prisma.processNode.create({
+        data: {
+          processId,
+          label: label || `Nuevo ${nodeType}`,
+          description: description || null,
+          nodeType,
+          creditStage,
+          responsibleRole: responsibleRole || (sourceNode ? sourceNode.responsibleRole : "ANALYSIS"),
+          systemUsed: systemUsed || (sourceNode ? sourceNode.systemUsed : "Core Bancario T24"),
+          positionX: nextX,
+          positionY: nextY,
+          styleConfig: typeof styleConfig === "string" ? styleConfig : styleConfig ? JSON.stringify(styleConfig) : null,
+        },
+      });
+
+      const newEdge = await prisma.processEdge.create({
+        data: {
+          processId,
+          sourceNodeId,
+          targetNodeId: newNode.id,
+          conditionLabel: conditionLabel || null,
+          animated: true,
+        },
+      });
+
+      return NextResponse.json({ success: true, node: newNode, edge: newEdge });
+    }
+
+    // Acción 5: Actualizar datos y configuración contextual del nodo (Inspector Drawer)
+    if (action === "UPDATE_NODE") {
+      const {
+        nodeId,
+        label,
+        description,
+        nodeType,
+        creditStage,
+        responsibleRole,
+        systemUsed,
+        styleConfig,
+        outgoingConditionLabel,
+      } = body;
+
+      const updatedNode = await prisma.processNode.update({
+        where: { id: nodeId },
+        data: {
+          ...(label !== undefined && { label }),
+          ...(description !== undefined && { description }),
+          ...(nodeType !== undefined && { nodeType }),
+          ...(creditStage !== undefined && { creditStage }),
+          ...(responsibleRole !== undefined && { responsibleRole }),
+          ...(systemUsed !== undefined && { systemUsed }),
+          ...(styleConfig !== undefined && {
+            styleConfig: typeof styleConfig === "string" ? styleConfig : JSON.stringify(styleConfig),
+          }),
+        },
+      });
+
+      // Si se envía actualización de condición para la arista saliente
+      if (outgoingConditionLabel !== undefined) {
+        const edge = await prisma.processEdge.findFirst({ where: { sourceNodeId: nodeId } });
+        if (edge) {
+          await prisma.processEdge.update({
+            where: { id: edge.id },
+            data: { conditionLabel: outgoingConditionLabel },
+          });
+        }
+      }
+
+      return NextResponse.json({ success: true, node: updatedNode });
+    }
+
+    // Acción 6: Eliminar nodo del proceso
+    if (action === "DELETE_NODE") {
+      const { nodeId } = body;
+      await prisma.processNode.delete({
+        where: { id: nodeId },
+      });
+      return NextResponse.json({ success: true, message: "Nodo eliminado correctamente" });
     }
 
     return NextResponse.json({ success: false, error: "Acción no reconocida" }, { status: 400 });

@@ -60,3 +60,20 @@ Aunque la plataforma es **100% funcional, estable y visualmente fiel a B×+**, c
 | **3. Detección Automática de Violación SoD (CUB Art. 65 y 88)** | [FlowchartView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/FlowchartView.tsx) | Algoritmo de auditoría SoD en `loadProcessDetail` (líneas 229–293) que evalúa la Regla 1 (Promoción conectando directo a Aprobación/Ejecución sin punto de control) y la Regla 2 (Nodo con riesgo Rojo/Naranja con controles `NF`), interruptor `"Auditoría SoD (CUB)"` con contador en barra superior y desglose del dictamen en el *drawer* lateral (líneas 864–879). | ✅ **100% Cerrado** |
 | **4. Gobernanza RBAC de 3 Líneas de Defensa** | [RiskAdminView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/RiskAdminView.tsx) y [route.ts](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/app/api/risks/route.ts) | Diferenciación por `currentRole`: `PROCESS_OWNER` registra riesgos en `UNDER_REVIEW`, `UAIR_ADMIN` / `C_LEVEL_CAIR` disponen del botón `"Aprobar y Publicar"` conectado a `PATCH /api/risks` (`APPROVE_AND_PUBLISH_RISK` con sello `SHA-256`), e `INTERNAL_AUDITOR` opera en modo Solo Lectura (`CUB Art. 88`). | ✅ **100% Cerrado** |
 | **5. Modal `+ Nuevo Plan` con Previsualización Quick-Win y Evidencias SHA-256** | [ActionPlansView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/ActionPlansView.tsx) y [route.ts](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/app/api/action-plans/route.ts) | Modal `"+ Nuevo Plan de Mitigación"` (líneas 464–624) con cálculo en vivo de ahorro $\Delta\text{PEA}$, $\Delta\text{PMA}$ e insignia `Quick-Win`, y Modal `"Adjuntar Evidencia de Control (SHA-256)"` (líneas 627–704) conectado a `ADD_EVIDENCE` en `POST /api/action-plans` (líneas 69–134) que crea registros en `ActionPlanEvidence` y sella en `AuditLog`. | ✅ **100% Cerrado** |
+
+
+---
+
+## 8. Dictamen de Verificación — Módulo 9 (Marco Teórico & Metodología) y Reordenamiento de Menú (Commits `a7dd538` a `f1f49e0`)
+
+**Fecha de Verificación:** 21 de Octubre de 2026  
+**Resultado:** **100% FUNCIONAL, TIPADO (`npx tsc --noEmit` CON 0 ERRORES) Y ALINEADO AL PROCESO BANCARIO**
+
+- **[Header.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/Header.tsx#L29-L39):** Las **9 pestañas** están ordenadas en la secuencia exacta del ciclo AIR:
+  `1. Dashboard` $\rightarrow$ `2. Marco Teórico` $\rightarrow$ `3. Importador` $\rightarrow$ `4. Diagramador` $\rightarrow$ `5. Matriz Viva` $\rightarrow$ `6. Matriz 5x5` $\rightarrow$ `7. Simulador` $\rightarrow$ `8. Planes & Quick-Wins` $\rightarrow$ `9. Reportes & Audit Trail`.
+- **[MethodologyView.tsx](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/components/MethodologyView.tsx):** 1,321 líneas implementadas con:
+  1. **Universo de Riesgos (`UNIVERSE`):** Los 3 Bloques CNBV y las 11 taxonomías con contadores en vivo conectados a `/api/risks` y navegación directa a la Matriz Viva.
+  2. **Los 5 Pilares Metodológicos (`PILLARS`):** Vinculación a procesos/SoD, Matriz 5×5 + Zonas RAF, Reglas de Controles (`NF` topado a $\le 2$ y penalización temporal $d+0, d+1, d+7, d+30$), cuantificación $\text{PEA}/\text{PMA}$ y algoritmo Top 5–7.
+  3. **Formulario Matemático Auditable (`FORMULAS`):** Las 6 ecuaciones maestras referenciadas a sus archivos en `src/lib/engines/` y `src/lib/audit.ts`.
+  4. **Ciclo de Vida y Gobernanza 3LD (`GOVERNANCE`):** Las 4 vías de captura y el flujo de aprobación entre 1ª, 2ª y 3ª Línea de Defensa.
+  5. **Calculadora Pedagógica en Vivo (`SANDBOX`):** Simulador interactivo conectado directamente a [`evaluateControlEffectiveness`](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/lib/engines/operational-risk-engine.ts) y [`calculateOperationalRiskMetrics`](file:///Users/raguirre/Documents/Propuestas/Demo-MatrizRiesgoBx+/src/lib/engines/operational-risk-engine.ts).

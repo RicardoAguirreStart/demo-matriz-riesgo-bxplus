@@ -1172,115 +1172,151 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         </div>
       )}
 
-      {/* Main Process Toolbar */}
-      <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 flex flex-wrap items-center justify-between gap-4 w-full">
-        <div>
-          <h2 className="text-base font-bold text-gray-900 font-serif">
-            {activeProcess?.name || "Selecciona un Proceso Bancario"}
-          </h2>
-          {activeProcess?.description && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{activeProcess.description}</p>
-          )}
+      {/* Main Process Subheader & Control Toolbar */}
+      <div className="bg-white rounded-bx shadow-card border border-gray-200 w-full overflow-hidden">
+        {/* Tier 1: Identidad del Proceso + Acciones Estratégicas de IA */}
+        <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Izquierda: Código, Categoría, Título y Descripción */}
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {activeProcess?.code && (
+                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200 shrink-0">
+                  {activeProcess.code}
+                </span>
+              )}
+              {activeProcess?.macroProcess?.name && (
+                <span className="text-[11px] font-semibold text-[#3299A8] bg-[#3299A8]/10 px-2 py-0.5 rounded border border-[#3299A8]/20 shrink-0">
+                  {activeProcess.macroProcess.name}
+                </span>
+              )}
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 font-serif truncate">
+                {activeProcess?.name || "Selecciona un Proceso Bancario"}
+              </h2>
+            </div>
+            {activeProcess?.description && (
+              <p className="text-xs text-gray-500 max-w-4xl line-clamp-1">
+                {activeProcess.description}
+              </p>
+            )}
+          </div>
+
+          {/* Derecha: Acciones de Inteligencia Artificial (Hero Actions) */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Botón: Generar Proceso con IA */}
+            <button
+              type="button"
+              onClick={handleOpenAiProcessGenerator}
+              className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-3.5 py-2 rounded flex items-center gap-1.5 shadow-xs transition-all transform hover:scale-[1.02] cursor-pointer"
+              title="Diseñar un proceso bancario completo mediante entrevista interactiva con Gemini"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-[#1F242B]" />
+              <span>Generar Proceso con IA</span>
+            </button>
+
+            {/* Botón: Evaluador Riesgos IA (Proceso Completo) */}
+            <button
+              type="button"
+              onClick={handleRunFullProcessEvaluation}
+              className="bg-[#1F242B] hover:bg-[#2A313C] text-white font-bold text-xs px-3.5 py-2 rounded flex items-center gap-1.5 shadow-xs transition-colors border border-gray-700 cursor-pointer"
+              title="Auditoría integral con IA y contexto transversal de todos los procesos de B×+"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-[#C0D725]" />
+              <span>Evaluador Riesgos IA</span>
+            </button>
+          </div>
         </div>
 
-        {/* Process Selector and Interactive Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Selector de Procesos */}
-          <div className="flex items-center gap-1.5">
+        {/* Separador sutil */}
+        <div className="border-t border-gray-100" />
+
+        {/* Tier 2: Barra Operativa de Selección, Auditoría y Herramientas del Lienzo */}
+        <div className="bg-gray-50/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs border-t border-gray-200/60">
+          {/* Cluster Izquierdo: Selección del Proceso y Borrado Seguro */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-600">Proceso:</span>
             <CustomSelect
               value={selectedProcessId}
               onChange={(val) => setSelectedProcessId(val)}
               options={processOptions}
               theme="light"
-              className="min-w-[240px]"
-              dropdownClassName="w-[320px]"
+              className="min-w-[260px] max-w-[380px]"
+              dropdownClassName="w-[360px]"
             />
             {selectedProcessId && (
               <button
                 type="button"
                 onClick={() => setIsDeleteProcessModalOpen(true)}
-                className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded flex items-center gap-1 transition-colors cursor-pointer shadow-xs font-semibold"
+                className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded transition-colors cursor-pointer"
                 title={`Eliminar el proceso actual "${activeProcess?.name || ''}"`}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Borrar</span>
+                <Trash2 className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          {/* Botón: Generar Proceso con IA */}
-          <button
-            onClick={handleOpenAiProcessGenerator}
-            className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-all transform hover:scale-[1.02] cursor-pointer"
-            title="Diseñar un proceso bancario completo mediante entrevista interactiva con Gemini"
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-[#1F242B]" />
-            <span>Generar Proceso con IA</span>
-          </button>
+          {/* Cluster Derecho: Auditoría SoD y Controles del Diagrama */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Auditoría SoD (CUB) */}
+            <button
+              type="button"
+              onClick={() => setSodAuditActive(!sodAuditActive)}
+              className={`text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 border transition-all cursor-pointer ${
+                sodAuditActive
+                  ? "bg-rose-50 text-rose-800 border-rose-300 ring-2 ring-rose-400"
+                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50 shadow-2xs"
+              }`}
+              title="Auditoría normativa de Segregación de Funciones según CUB Art. 65 y Art. 88"
+            >
+              <AlertTriangle className={`w-3.5 h-3.5 ${sodAuditActive ? "text-rose-600" : "text-gray-500"}`} />
+              <span>Auditoría SoD</span>
+              {sodViolationsCount > 0 && (
+                <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.2 rounded-[3px] font-mono font-semibold">
+                  {sodViolationsCount}
+                </span>
+              )}
+            </button>
 
-          {/* Botón: Evaluador Riesgos IA (Proceso Completo) */}
-          <button
-            onClick={handleRunFullProcessEvaluation}
-            className="bg-[#1F242B] hover:bg-[#2A313C] text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors border border-gray-700 cursor-pointer"
-            title="Auditoría integral con IA y contexto transversal de todos los procesos de B×+"
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-[#C0D725]" />
-            <span>Evaluador Riesgos IA</span>
-          </button>
+            {/* Separador vertical */}
+            <div className="h-5 w-px bg-gray-300 hidden sm:block" />
 
-          {/* Botón: Auditoría SoD (CUB) */}
-          <button
-            onClick={() => setSodAuditActive(!sodAuditActive)}
-            className={`text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 border transition-all cursor-pointer ${
-              sodAuditActive
-                ? "bg-rose-50 text-rose-800 border-rose-300 ring-2 ring-rose-400"
-                : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-            }`}
-            title="Auditoría normativa de Segregación de Funciones según CUB Art. 65 y Art. 88"
-          >
-            <AlertTriangle className={`w-3.5 h-3.5 ${sodAuditActive ? "text-rose-600" : "text-gray-500"}`} />
-            <span>Auditoría SoD</span>
-            {sodViolationsCount > 0 && (
-              <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.2 rounded-[3px] font-mono font-semibold">
-                {sodViolationsCount}
-              </span>
-            )}
-          </button>
+            {/* Herramientas de Edición y Navegación del Canvas */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => fitView({ padding: 0.15, duration: 400 })}
+                className="bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                title="Ajustar y centrar todas las figuras del diagrama en pantalla"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-[#3299A8]" />
+                <span>Centrar</span>
+              </button>
 
-          {/* Botón: Centrar / Ajustar Vista */}
-          <button
-            type="button"
-            onClick={() => fitView({ padding: 0.15, duration: 400 })}
-            className="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-            title="Ajustar y centrar todas las figuras del diagrama en pantalla"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-[#3299A8]" />
-            <span>Centrar Diagrama</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleSaveLayout}
+                disabled={savingPositions}
+                className="bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+                title="Guardar posiciones actuales de los nodos"
+              >
+                {savingPositions ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3299A8]" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 text-[#3299A8]" />
+                )}
+                <span>Guardar Layout</span>
+              </button>
 
-          {/* Botón: Guardar Layout */}
-          <button
-            onClick={handleSaveLayout}
-            disabled={savingPositions}
-            className="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {savingPositions ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3299A8]" />
-            ) : (
-              <Save className="w-3.5 h-3.5 text-[#3299A8]" />
-            )}
-            <span>Guardar Layout</span>
-          </button>
-
-          {/* Botón: + Nuevo Nodo Manual */}
-          <button
-            onClick={() => setIsNewNodeModalOpen(true)}
-            className="bg-white border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#3299A8]" />
-            <span>+ Nodo Manual</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setIsNewNodeModalOpen(true)}
+                className="bg-[#1F242B] hover:bg-[#2A313C] text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Agregar manualmente un paso operativo o compuerta al diagrama"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#C0D725]" />
+                <span>+ Nodo Manual</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

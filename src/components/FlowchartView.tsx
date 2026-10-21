@@ -1173,26 +1173,14 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
       )}
 
       {/* Main Process Subheader & Control Toolbar */}
-      <div className="bg-white rounded-bx shadow-card border border-gray-200 w-full overflow-hidden">
+      <div className="bg-white rounded-bx shadow-card border border-gray-200 w-full relative z-30">
         {/* Tier 1: Identidad del Proceso + Acciones Estratégicas de IA */}
         <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Izquierda: Código, Categoría, Título y Descripción */}
+          {/* Izquierda: Título y Descripción */}
           <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              {activeProcess?.code && (
-                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200 shrink-0">
-                  {activeProcess.code}
-                </span>
-              )}
-              {activeProcess?.macroProcess?.name && (
-                <span className="text-[11px] font-semibold text-[#3299A8] bg-[#3299A8]/10 px-2 py-0.5 rounded border border-[#3299A8]/20 shrink-0">
-                  {activeProcess.macroProcess.name}
-                </span>
-              )}
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 font-serif truncate">
-                {activeProcess?.name || "Selecciona un Proceso Bancario"}
-              </h2>
-            </div>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 font-serif">
+              {activeProcess?.name || "Selecciona un Proceso Bancario"}
+            </h2>
             {activeProcess?.description && (
               <p className="text-xs text-gray-500 max-w-4xl line-clamp-1">
                 {activeProcess.description}
@@ -1200,28 +1188,26 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
             )}
           </div>
 
-          {/* Derecha: Acciones de Inteligencia Artificial (Hero Actions) */}
+          {/* Derecha: Acciones de Inteligencia Artificial (Sin Iconos) */}
           <div className="flex items-center gap-2.5 shrink-0">
             {/* Botón: Generar Proceso con IA */}
             <button
               type="button"
               onClick={handleOpenAiProcessGenerator}
-              className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-3.5 py-2 rounded flex items-center gap-1.5 shadow-xs transition-all transform hover:scale-[1.02] cursor-pointer"
+              className="bg-[#C0D725] hover:bg-[#AEC41D] text-[#1F242B] font-bold text-xs px-3.5 py-2 rounded shadow-xs transition-all transform hover:scale-[1.02] cursor-pointer"
               title="Diseñar un proceso bancario completo mediante entrevista interactiva con Gemini"
             >
-              <Sparkles className="w-3.5 h-3.5 fill-[#1F242B]" />
-              <span>Generar Proceso con IA</span>
+              Generar Proceso con IA
             </button>
 
             {/* Botón: Evaluador Riesgos IA (Proceso Completo) */}
             <button
               type="button"
               onClick={handleRunFullProcessEvaluation}
-              className="bg-[#1F242B] hover:bg-[#2A313C] text-white font-bold text-xs px-3.5 py-2 rounded flex items-center gap-1.5 shadow-xs transition-colors border border-gray-700 cursor-pointer"
+              className="bg-[#1F242B] hover:bg-[#2A313C] text-white font-bold text-xs px-3.5 py-2 rounded shadow-xs transition-colors border border-gray-700 cursor-pointer"
               title="Auditoría integral con IA y contexto transversal de todos los procesos de B×+"
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-[#C0D725]" />
-              <span>Evaluador Riesgos IA</span>
+              Evaluador Riesgos IA
             </button>
           </div>
         </div>
@@ -1230,7 +1216,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         <div className="border-t border-gray-100" />
 
         {/* Tier 2: Barra Operativa de Selección, Auditoría y Herramientas del Lienzo */}
-        <div className="bg-gray-50/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs border-t border-gray-200/60">
+        <div className="bg-gray-50/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs border-t border-gray-200/60 relative z-30">
           {/* Cluster Izquierdo: Selección del Proceso y Borrado Seguro */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-600">Proceso:</span>
@@ -1313,7 +1299,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                 title="Agregar manualmente un paso operativo o compuerta al diagrama"
               >
                 <Plus className="w-3.5 h-3.5 text-[#C0D725]" />
-                <span>+ Nodo Manual</span>
+                <span>Nodo Manual</span>
               </button>
             </div>
           </div>

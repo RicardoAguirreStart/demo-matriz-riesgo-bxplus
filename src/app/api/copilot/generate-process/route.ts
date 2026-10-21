@@ -9,6 +9,19 @@ import { RoleType } from "@/types";
 const apiKey = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
 
+// Helper para limpiar sintaxis markdown y dejar texto conversacional limpio
+function stripMarkdownSyntax(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/^(\s*)\*\s+/gm, "$1- ")
+    .replace(/\*/g, "")
+    .replace(/^#+\s+/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -26,28 +39,32 @@ export async function POST(request: Request) {
             model: "gemini-2.5-flash",
             systemInstruction: `Eres el Arquitecto Senior de Procesos y Riesgos Bancarios de Banco Ve por Más (B×+).
 Tu función es entrevistar brevemente al usuario para modelar un proceso bancario de extremo a extremo conforme a la Circular Única de Bancos (CUB), Banxico y estándares de Segregación de Funciones (SoD).
-Al recibir la idea de proceso del usuario, debes formularle de 3 a 4 preguntas puntuales clave sobre:
+Formula de 3 a 4 preguntas puntuales clave sobre:
 1. Unidad de negocio y segmento (Empresarial, Agropecuario, PyME, Personas).
 2. Sistemas TI involucrados (Core Bancario T24, SPEI, Buró de Crédito, Motor PLD/OFAC, Portal Web).
 3. Umbral de decisión facultada (monto en MXN que requiere aprobación de Comité vs mesa de crédito).
 4. Puntos de control normativos (validación de poderes, colaterales E*, biometría o filtro ASG/DNSH).
 
-Devuelve una respuesta con tono bancario institucional, clara y concisa, invitando a responder o a construir de inmediato.`,
+REGLA OBLIGATORIA DE FORMATO:
+- Devuelve ÚNICAMENTE texto en lenguaje natural y fluido.
+- NUNCA uses formato Markdown: NO uses asteriscos dobles (**negrita**), NO uses asteriscos simples (*cursiva*), NO uses viñetas con asterisco (* item) ni encabezados con numeral (#).
+- Usa numeración limpia (1., 2., 3.) o guiones limpios (-) sin asteriscos.`,
           });
 
           const conversationText = messages
-            .map((m: any) => `${m.role === "user" ? "Usuario" : "Arquitecto B×+"}: ${m.content}`)
+            .map((m: any) => `${m.role === "user" ? "Usuario" : "Arquitecto B×+"}: ${stripMarkdownSyntax(m.content)}`)
             .join("\n");
 
           const prompt = `Conversación previa:\n${conversationText}\n\nNueva propuesta del usuario: "${processDescription}".
-Haz las 3 a 4 preguntas clave y sugiere opciones directas de respuesta.`;
+Haz las 3 a 4 preguntas clave y sugiere opciones directas de respuesta sin ningún formato markdown ni asteriscos.`;
 
           const result = await model.generateContent(prompt);
-          const answer = (await result.response).text();
+          const rawAnswer = (await result.response).text();
+          const cleanAnswer = stripMarkdownSyntax(rawAnswer);
 
           return NextResponse.json({
             success: true,
-            reply: answer,
+            reply: cleanAnswer,
             suggestedQuickReplies: [
               "Segmento PyME con Buró + Core T24",
               "Umbral Comité: Créditos > $5,000,000 MXN",
@@ -60,16 +77,17 @@ Haz las 3 a 4 preguntas clave y sugiere opciones directas de respuesta.`;
         console.error("Gemini interview fallback triggered:", err);
       }
 
-      // Fallback determinista para entrevista
+      // Fallback determinista para entrevista sin markdown
       return NextResponse.json({
         success: true,
-        reply: `Excelente propuesta para modelar **"${processDescription}"** en Banco B×+. Para estructurar el diagrama con máxima precisión regulatoria y de control, por favor indícame:
-1. **Unidad y Segmento:** ¿Corresponde a Banca Empresarial, Agropecuaria, PyME o Minorista?
-2. **Sistemas TI:** ¿Qué plataformas intervienen? (ej. *Core T24*, *SPEI Banxico*, *Buró de Crédito*, *Motor PLD*).
-3. **Umbrales Críticos:** ¿Cuál es el límite monetario o paramétrico que detona escalamiento a Comité facultado?
-4. **Puntos de Control:** ¿Se requiere validación dual de expedientes, aforo de garantías ($E^*$) o filtro ambiental ASG?
+        reply: `Excelente propuesta para modelar "${processDescription}" en Banco B×+. Para estructurar el diagrama con máxima precisión regulatoria y de control, por favor indícame:
 
-*Puedes contestar estas preguntas o presionar directamente el botón "Construir Diagrama Completo Ahora".*`,
+1. Unidad y Segmento: ¿Corresponde a Banca Empresarial, Agropecuaria, PyME o Minorista?
+2. Sistemas TI: ¿Qué plataformas intervienen? (ej. Core T24, SPEI Banxico, Buró de Crédito, Motor PLD).
+3. Umbrales Críticos: ¿Cuál es el límite monetario o paramétrico que detona escalamiento a Comité facultado?
+4. Puntos de Control: ¿Se requiere validación dual de expedientes, aforo de garantías (E*) o filtro ambiental ASG?
+
+Puedes contestar estas preguntas o presionar directamente el botón "Construir Diagrama Completo Ahora".`,
         suggestedQuickReplies: [
           "Segmento PyME con Buró + Core T24",
           "Umbral Comité: Créditos > $5,000,000 MXN",
@@ -148,11 +166,11 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
 
     // Fallback determinista bancario de alta calidad si Gemini no generó JSON válido
     if (!generatedData || !Array.isArray(generatedData.nodes) || generatedData.nodes.length < 5) {
-      const sanitizedName = processDescription.length > 50 ? `${processDescription.substring(0, 47)}...` : processDescription;
+      const sanitizedName = processDescription && processDescription.length > 50 ? `${processDescription.substring(0, 47)}...` : (processDescription || "Proceso de Crédito y Servicios B×+");
       generatedData = {
         code: `PR-IA-${Math.floor(100 + Math.random() * 900)}`,
         name: sanitizedName,
-        description: `Flujo operativo estructurado automáticamente por el Asistente IA de Banco B×+ para: ${processDescription}`,
+        description: `Flujo operativo estructurado automáticamente por el Asistente IA de Banco B×+ para: ${sanitizedName}`,
         nodes: [
           {
             tempId: "n1",
@@ -181,84 +199,87 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
           {
             tempId: "n3",
             nodeType: "DECISION_GATEWAY",
-            label: "¿Cumple Score Paramétrico y Filtro ASG?",
-            description: "Evaluación de buró crediticio (Score >= 680) y matriz de riesgo climático CONAGUA/DNSH.",
+            label: "¿Califica Score y Capacidad de Pago?",
+            description: "Evaluación paramétrica de BC Score >= 680 y razón de apalancamiento normativo.",
             responsibleRole: "ANALYSIS",
             creditStage: "EVALUATION",
-            systemUsed: "Motor de Riesgo & Scoring B×+",
+            systemUsed: "Motor de Decisión Crediticia",
             positionX: 690,
             positionY: 120,
             styleConfig: {
-              decisionQuestion: "¿Score Crediticio >= 680 y Riesgo Climático Aceptable?",
-              yesCriteria: "Pasa a validación facultada",
-              noCriteria: "Escalamiento a Comité de Riesgos",
+              decisionQuestion: "¿El solicitante cumple el perfil de riesgo paramétrico B×+?",
+              yesCriteria: "Score >= 680 y capacidad de pago demostrada",
+              noCriteria: "Score < 680 o excedente de apalancamiento",
               thresholdMXN: 5000000,
             },
           },
           {
             tempId: "n4",
             nodeType: "CONTROL_POINT",
-            label: "Control Dual: Validación de Garantías y Colateral E*",
-            description: "Punto de control de 2ª Línea. Cálculo de aforo de colateral conforme a la CUB Anexo 15 Bis.",
+            label: "Candado PLD / Listas Restrictivas (F)",
+            description: "Barrido automático contra listas negras OFAC, PEPs y 69-B del CFF.",
             responsibleRole: "CONTROL_2ND_LINE",
-            creditStage: "APPROVAL",
-            systemUsed: "Core Bancario T24",
+            creditStage: "EVALUATION",
+            systemUsed: "Sistema Integral PLD B×+",
             positionX: 1010,
-            positionY: 80,
+            positionY: 120,
             styleConfig: {
-              isFormalized: true,
+              controlNature: "PREVENTIVE",
+              automation: "AUTOMATIC",
+              cnbvFormalized: true,
               periodicity: "d+0",
-              controlNature: "PREVENTIVE_AUTOMATED",
+              evidenceType: "Log de cotejo criptográfico",
             },
           },
           {
             tempId: "n5_alt",
             nodeType: "TASK_STEP",
-            label: "Sesión Extraordinaria de Comité Facultado",
-            description: "Revisión manual de excepciones paramétricas y análisis de mitigantes complementarios.",
+            label: "Comité de Riesgos y Excepciones B×+",
+            description: "Sesión del Órgano Facultado para evaluar garantías líquidas o mitigantes.",
             responsibleRole: "APPROVAL",
             creditStage: "APPROVAL",
-            systemUsed: "Portal Comité CAIR",
-            positionX: 1010,
+            systemUsed: "Portal de Comités B×+",
+            positionX: 690,
             positionY: 280,
             styleConfig: { slaHours: 24 },
           },
           {
             tempId: "n6",
             nodeType: "EXTERNAL_SYSTEM",
-            label: "Autorización y Registro en Core Bancario",
-            description: "Apertura de línea de crédito, alta de pagaré y vinculación a cuenta eje en T24.",
+            label: "Core Bancario T24 (Alta de Cuenta)",
+            description: "Generación de número de cuenta y contrato marco en base de datos central.",
             responsibleRole: "EXECUTION",
             creditStage: "INSTRUMENTATION",
-            systemUsed: "Core Bancario T24 (Temenos)",
+            systemUsed: "Temenos T24 Core",
             positionX: 1330,
             positionY: 120,
-            styleConfig: { interfaceType: "REST_SYNC", rtoHours: 2 },
+            styleConfig: { interfaceType: "REST_MQ", rtoHours: 2 },
           },
           {
             tempId: "n7",
-            nodeType: "FRAUD_CHECKPOINT",
-            label: "Candado Anexo 12-E: Monitoreo SPEI Pre-Dispersión",
-            description: "Control preventivo en tiempo real contra suplantación y cuentas destino no reconocidas.",
+            nodeType: "CONTROL_POINT",
+            label: "Control Dual de Dispersión SPEI (F)",
+            description: "Autorización de cuatro ojos requerida por Banxico para liquidación de fondos.",
             responsibleRole: "CONTROL_2ND_LINE",
             creditStage: "CONTROL_RECOVERY",
-            systemUsed: "Módulo SPEI Circular 8/2019",
+            systemUsed: "Módulo de Seguridad Banxico",
             positionX: 1650,
             positionY: 120,
             styleConfig: {
-              isFormalized: true,
+              controlNature: "PREVENTIVE",
+              automation: "MANUAL_SUPERVISED",
+              cnbvFormalized: true,
               periodicity: "d+0",
-              controlNature: "PREVENTIVE_AUTOMATED",
             },
           },
           {
             tempId: "n8",
             nodeType: "START_END",
-            label: "Fin: Dispersión de Recursos y Alta en Cartera",
-            description: "Liquidación vía SPEI Banxico y generación de comprobante normativo CEP.",
+            label: "Fin: Liquidación y Formalización Exitosa",
+            description: "Emisión de comprobante CEP Banxico y notificación multicanal al cliente.",
             responsibleRole: "EXECUTION",
             creditStage: "CONTROL_RECOVERY",
-            systemUsed: "Banxico SPEI & Banca Electrónica",
+            systemUsed: "Banxico SPEI & Notificaciones",
             positionX: 1970,
             positionY: 120,
             styleConfig: { iconShape: "oval", stage: "END" },
@@ -278,17 +299,19 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
     }
 
     // Buscar Macroproceso y Usuario activo para vincular el proceso
-    const macroProcess =
-      (await prisma.macroProcess.findFirst({ include: { businessUnit: true } })) ||
-      (await prisma.macroProcess.create({
+    let macroProcess = await prisma.macroProcess.findFirst({ include: { businessUnit: true } });
+    if (!macroProcess) {
+      const bu = await prisma.businessUnit.findFirst();
+      macroProcess = await prisma.macroProcess.create({
         data: {
-          code: "MP-IA-01",
+          code: `MP-IA-${Date.now().toString().slice(-4)}`,
           name: "Procesos y Productos Bancarios Inteligentes",
           category: "BUSINESS",
-          businessUnitId: (await prisma.businessUnit.findFirst())?.id || "",
+          businessUnitId: bu?.id || "",
         },
         include: { businessUnit: true },
-      }));
+      });
+    }
 
     const user =
       (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
@@ -298,12 +321,32 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
       return NextResponse.json({ success: false, error: "No se encontró configuración base en la base de datos" }, { status: 500 });
     }
 
+    // Resolver código único garantizado para evitar colisiones con la restricción UNIQUE de SQLite
+    const rawCode = (generatedData.code || "PR-IA").trim().toUpperCase();
+    let baseCode = rawCode.startsWith("PR-") ? rawCode : `PR-${rawCode}`;
+    baseCode = baseCode.replace(/[^A-Z0-9-]/g, "");
+    if (baseCode.length > 20) baseCode = baseCode.slice(0, 20);
+
+    let finalCode = baseCode;
+    let attempts = 0;
+    while (await prisma.process.findUnique({ where: { code: finalCode } })) {
+      attempts++;
+      finalCode = `${baseCode}-${Math.floor(100 + Math.random() * 900)}`;
+      if (attempts > 15) {
+        finalCode = `PR-IA-${Date.now().toString().slice(-6)}`;
+        break;
+      }
+    }
+
+    const finalName = (generatedData.name || processDescription || "Nuevo Proceso Bancario B×+").trim();
+    const finalDesc = (generatedData.description || `Flujo operativo estructurado por IA para: ${finalName}`).trim();
+
     // Persistir el Proceso en SQLite
     const createdProcess = await prisma.process.create({
       data: {
-        code: generatedData.code || `PR-IA-${Date.now().toString().slice(-4)}`,
-        name: generatedData.name,
-        description: generatedData.description,
+        code: finalCode,
+        name: finalName,
+        description: finalDesc,
         macroProcessId: macroProcess.id,
         ownerId: user.id,
         isCriticalBCP: true,
@@ -314,37 +357,70 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
 
     // Mapear tempIds a los IDs reales de Prisma
     const idMap: Record<string, string> = {};
+    const createdNodesList: any[] = [];
 
-    for (const nodeData of generatedData.nodes) {
+    const validNodeTypes = [
+      "START_END",
+      "TASK_STEP",
+      "DECISION_GATEWAY",
+      "CONTROL_POINT",
+      "FRAUD_CHECKPOINT",
+      "EXTERNAL_SYSTEM",
+    ];
+
+    for (let i = 0; i < (generatedData.nodes || []).length; i++) {
+      const nodeData = generatedData.nodes[i];
+      const nodeType = validNodeTypes.includes(nodeData.nodeType) ? nodeData.nodeType : "TASK_STEP";
+
       const createdNode = await prisma.processNode.create({
         data: {
           processId: createdProcess.id,
-          label: nodeData.label,
+          label: (nodeData.label || `Paso ${i + 1}`).trim(),
           description: nodeData.description || null,
-          nodeType: nodeData.nodeType || "TASK_STEP",
+          nodeType: nodeType,
           creditStage: nodeData.creditStage || "NOT_APPLICABLE",
           responsibleRole: nodeData.responsibleRole || "ANALYSIS",
           systemUsed: nodeData.systemUsed || "Core Bancario T24",
-          positionX: Number(nodeData.positionX) || 100,
-          positionY: Number(nodeData.positionY) || 100,
+          positionX: Number(nodeData.positionX) || (50 + i * 300),
+          positionY: Number(nodeData.positionY) || 120,
           styleConfig: nodeData.styleConfig ? JSON.stringify(nodeData.styleConfig) : null,
         },
       });
-      idMap[nodeData.tempId] = createdNode.id;
+      createdNodesList.push(createdNode);
+      if (nodeData.tempId) {
+        idMap[nodeData.tempId] = createdNode.id;
+      }
     }
 
     // Crear las aristas
-    for (const edgeData of generatedData.edges) {
-      const realSourceId = idMap[edgeData.sourceTempId];
-      const realTargetId = idMap[edgeData.targetTempId];
+    if (Array.isArray(generatedData.edges) && generatedData.edges.length > 0) {
+      for (const edgeData of generatedData.edges) {
+        const realSourceId = idMap[edgeData.sourceTempId];
+        const realTargetId = idMap[edgeData.targetTempId];
 
-      if (realSourceId && realTargetId) {
+        if (realSourceId && realTargetId && realSourceId !== realTargetId) {
+          await prisma.processEdge.create({
+            data: {
+              processId: createdProcess.id,
+              sourceNodeId: realSourceId,
+              targetNodeId: realTargetId,
+              conditionLabel: edgeData.conditionLabel || null,
+              animated: true,
+            },
+          });
+        }
+      }
+    }
+
+    // Si por alguna razón no se crearon aristas, encadenar secuencialmente los nodos creados
+    const edgesCount = await prisma.processEdge.count({ where: { processId: createdProcess.id } });
+    if (edgesCount === 0 && createdNodesList.length > 1) {
+      for (let i = 0; i < createdNodesList.length - 1; i++) {
         await prisma.processEdge.create({
           data: {
             processId: createdProcess.id,
-            sourceNodeId: realSourceId,
-            targetNodeId: realTargetId,
-            conditionLabel: edgeData.conditionLabel || null,
+            sourceNodeId: createdNodesList[i].id,
+            targetNodeId: createdNodesList[i + 1].id,
             animated: true,
           },
         });
@@ -362,8 +438,8 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
       newState: {
         processCode: createdProcess.code,
         processName: createdProcess.name,
-        nodesCount: generatedData.nodes.length,
-        edgesCount: generatedData.edges.length,
+        nodesCount: createdNodesList.length,
+        edgesCount: await prisma.processEdge.count({ where: { processId: createdProcess.id } }),
       },
     });
 
@@ -371,10 +447,13 @@ Contexto adicional del usuario: ${JSON.stringify(userAnswers)}.`;
       success: true,
       processId: createdProcess.id,
       process: createdProcess,
-      message: `Proceso "${createdProcess.name}" generado exitosamente con ${generatedData.nodes.length} figuras conectadas.`,
+      message: `Proceso "${createdProcess.name}" (${createdProcess.code}) generado exitosamente con ${createdNodesList.length} figuras conectadas.`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in /api/copilot/generate-process:", error);
-    return NextResponse.json({ success: false, error: "Error al generar proceso con IA" }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: `Error al generar proceso con IA: ${error?.message || "Error interno"}`,
+    }, { status: 500 });
   }
 }

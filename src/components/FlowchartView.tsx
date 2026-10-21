@@ -1,7 +1,7 @@
 // src/components/FlowchartView.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ReactFlow,
   Controls,
@@ -274,6 +274,36 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
   >([]);
   const [aiChatInput, setAiChatInput] = useState("");
   const [isGeneratingProcess, setIsGeneratingProcess] = useState(false);
+
+  // Auto-resize y auto-scroll para la conversación del Asistente IA
+  const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Helper para desplegar texto conversacional limpio sin sintaxis ni asteriscos markdown
+  const cleanAssistantText = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*([^*\n]+)\*/g, "$1")
+      .replace(/^(\s*)\*\s+/gm, "$1- ")
+      .replace(/\*/g, "")
+      .replace(/^#+\s+/gm, "")
+      .trim();
+  };
+
+  useEffect(() => {
+    if (chatTextareaRef.current) {
+      chatTextareaRef.current.style.height = "auto";
+      const scrollHeight = chatTextareaRef.current.scrollHeight;
+      chatTextareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, 38), 130)}px`;
+    }
+  }, [aiChatInput]);
+
+  useEffect(() => {
+    if (isAiGenerateModalOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [aiChatMessages, isGeneratingProcess, isAiGenerateModalOpen]);
 
   // Modal 3: Evaluador Integral de Riesgos IA Cross-Process
   const [isEvaluatorModalOpen, setIsEvaluatorModalOpen] = useState(false);
@@ -744,8 +774,8 @@ export function FlowchartView({ onOpenCopilot }: { onOpenCopilot: () => void }) 
       setAiChatMessages([
         {
           role: "assistant",
-          content: `¡Hola! Soy el **Arquitecto de Procesos y Riesgos Bancarios con IA de Banco B×+**.
-Describe el proceso que deseas modelar (ej. *"Originación de Arrendamiento Puro PyME"*, *"Apertura Digital de Cuenta con SPEI y Biometría"*, *"Reestructura de Cartera Agropecuaria FIRA"*).
+          content: `¡Hola! Soy el Arquitecto de Procesos y Riesgos Bancarios con IA de Banco B×+.
+Describe el proceso que deseas modelar (ej. "Originación de Arrendamiento Puro PyME", "Apertura Digital de Cuenta con SPEI y Biometría", "Reestructura de Cartera Agropecuaria FIRA").
 Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuertas de decisión, puntos de control y sistemas TI conforme a la CUB.`,
           suggestedChips: [
             "Originación de Arrendamiento Puro PyME",
@@ -763,7 +793,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
     const messageText = textToSend || aiChatInput;
     if (!messageText.trim() || isGeneratingProcess) return;
 
-    const newMessages = [...aiChatMessages, { role: "user" as const, content: messageText }];
+    const newMessages = [...aiChatMessages, { role: "user" as const, content: messageText.trim() }];
     setAiChatMessages(newMessages);
     setAiChatInput("");
     setIsGeneratingProcess(true);
@@ -774,7 +804,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "INTERVIEW",
-          processDescription: messageText,
+          processDescription: messageText.trim(),
           messages: newMessages,
         }),
       });
@@ -798,7 +828,11 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
 
   // Construir diagrama completo con IA
   const handleBuildProcessNow = async () => {
-    const lastUserMessage = [...aiChatMessages].reverse().find((m) => m.role === "user")?.content || "Proceso Bancario B×+";
+    const contextFromInput = aiChatInput.trim();
+    const lastUserMessage =
+      contextFromInput ||
+      [...aiChatMessages].reverse().find((m) => m.role === "user")?.content ||
+      "Proceso Bancario B×+";
     setIsGeneratingProcess(true);
 
     try {
@@ -821,8 +855,9 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
       } else {
         alert(data.error || "Ocurrió un error al generar el proceso");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error building process with AI:", err);
+      alert("Error de conexión al generar proceso: " + (err?.message || "Intente nuevamente"));
     } finally {
       setIsGeneratingProcess(false);
     }
@@ -1402,7 +1437,7 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                     <div className="font-bold text-[10px] opacity-75 mb-1 font-mono uppercase">
                       {msg.role === "user" ? "Usuario" : "Arquitecto de Procesos B×+"}
                     </div>
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    <div className="whitespace-pre-wrap leading-relaxed text-[12px]">{cleanAssistantText(msg.content)}</div>
 
                     {/* Chips de Respuestas Rápidas Sugeridas */}
                     {msg.suggestedChips && msg.suggestedChips.length > 0 && (
@@ -1429,25 +1464,33 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                   <span>El Arquitecto IA está analizando la estructura del proceso...</span>
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
 
             {/* Input y Botón de Construcción */}
             <div className="space-y-2 pt-2 border-t border-gray-100">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Escribe tu respuesta o el nombre del proceso..."
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={chatTextareaRef}
+                  rows={1}
+                  placeholder="Escribe tu respuesta o el nombre del proceso... (Enter para enviar, Shift+Enter para salto de línea)"
                   value={aiChatInput}
                   onChange={(e) => setAiChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendInterviewMessage()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendInterviewMessage();
+                    }
+                  }}
                   disabled={isGeneratingProcess}
-                  className="flex-1 p-2 border rounded text-xs outline-none focus:ring-1 focus:ring-[#3299A8]"
+                  className="flex-1 p-2.5 border border-gray-300 rounded text-xs outline-none focus:ring-1 focus:ring-[#3299A8] resize-none overflow-y-auto leading-relaxed bg-white text-gray-800"
+                  style={{ minHeight: "38px", maxHeight: "130px" }}
                 />
                 <button
                   type="button"
                   onClick={() => handleSendInterviewMessage()}
                   disabled={isGeneratingProcess || !aiChatInput.trim()}
-                  className="px-3 py-2 bg-[#1F242B] text-white rounded font-bold text-xs hover:bg-[#2A313C] disabled:opacity-50 flex items-center gap-1"
+                  className="h-[38px] px-3.5 bg-[#1F242B] text-white rounded font-bold text-xs hover:bg-[#2A313C] disabled:opacity-50 flex items-center justify-center gap-1 shrink-0 transition-colors"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Enviar</span>

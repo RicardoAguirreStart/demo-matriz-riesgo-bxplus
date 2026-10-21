@@ -3,27 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractTopCriticalRisks } from "@/lib/engines/prioritization-engine";
-
-function calculateRafZone(
-  current: number,
-  direction: string,
-  appetite: number,
-  tolerance: number,
-  regLimit: number
-): "GREEN" | "YELLOW" | "ORANGE" | "RED" {
-  if (direction === "HIGHER_IS_WORSE") {
-    if (current <= appetite) return "GREEN";
-    if (current <= tolerance) return "YELLOW";
-    if (current <= regLimit) return "ORANGE";
-    return "RED";
-  } else {
-    // LOWER_IS_WORSE (e.g. ICAP, CET1, CCL, SPEI_AVAIL)
-    if (current >= appetite) return "GREEN";
-    if (current >= tolerance) return "YELLOW";
-    if (current >= regLimit) return "ORANGE";
-    return "RED";
-  }
-}
+import { calculateRafZone } from "@/lib/utils";
 
 export async function GET(request: Request) {
   try {
@@ -124,10 +104,22 @@ export async function GET(request: Request) {
         select: {
           id: true,
           processId: true,
+          inherentScore: true,
           residualScore: true,
           residualZone: true,
           expectedAnnualLossPEA: true,
           maxAnnualLossPMA: true,
+          controls: {
+            select: {
+              control: {
+                select: {
+                  id: true,
+                  isFormalized: true,
+                  hasValidEvidence: true,
+                },
+              },
+            },
+          },
           actionPlans: {
             select: {
               id: true,
@@ -142,6 +134,20 @@ export async function GET(request: Request) {
     // 3. Totales Financieros Operativos
     const totalPEA = allRisks.reduce((sum, r) => sum + r.expectedAnnualLossPEA, 0);
     const totalPMA = allRisks.reduce((sum, r) => sum + r.maxAnnualLossPMA, 0);
+
+    // Mapeo Proceso <-> Indicador RAF Principal
+    const metricProcessMapping: Record<
+      string,
+      { processCode: string; processLabel: string }
+    > = {
+      IMORA: { processCode: "PR-AGRO-01", processLabel: "Crédito Agro & PyME" },
+      CET1: { processCode: "PR-AGRO-01", processLabel: "Solvencia Cartera Comercial" },
+      CCL: { processCode: "PR-TES-01", processLabel: "Liquidez & Tesorería" },
+      VAR_MKT: { processCode: "PR-TES-01", processLabel: "Mesa de Dinero & Tesorería" },
+      ICAP: { processCode: "PR-CRED-02", processLabel: "Garantías & Consumo Capital" },
+      SPEI_AVAIL: { processCode: "PR-TI-01", processLabel: "Continuidad SPEI & TI" },
+      PEA_OP: { processCode: "ALL", processLabel: "Transversal (Todos los Procesos)" },
+    };
 
     // 4. Sincronización en vivo de PEA_OP y Recálculo Dinámico de Zonas RAF
     const rafThresholds = rafThresholdsRaw.map((th) => {
@@ -181,6 +187,11 @@ export async function GET(request: Request) {
         regulatoryLimitValue
       );
 
+      const mapping = metricProcessMapping[th.metricCode] || {
+        processCode: "ALL",
+        processLabel: "Consolidado Banco",
+      };
+
       return {
         ...th,
         currentValue,
@@ -189,6 +200,8 @@ export async function GET(request: Request) {
         regulatoryLimitValue,
         capacityValue,
         currentZone,
+        associatedProcessCode: mapping.processCode,
+        associatedProcessLabel: mapping.processLabel,
       };
     });
 
@@ -293,7 +306,12 @@ export async function GET(request: Request) {
       coveragePct,
     };
 
-    // 7. Radiografía Ejecutiva por Proceso Bancario (processHealthSummary)
+    // 7. Radiografía Ejecutiva por Proceso Bancario con Métrica de Apetito RAF y KRI Clave
+    const globalBankPEA = allDbRisksForSummary.reduce(
+      (acc, r) => acc + r.expectedAnnualLossPEA,
+      0
+    );
+
     const processHealthSummary = allProcesses.map((p) => {
       const pRisks = allDbRisksForSummary.filter((r) => r.processId === p.id);
       const risksCount = pRisks.length;
@@ -314,6 +332,180 @@ export async function GET(request: Request) {
 
       const pTotalPEA = pRisks.reduce((sum, r) => sum + r.expectedAnnualLossPEA, 0);
       const pTotalPMA = pRisks.reduce((sum, r) => sum + r.maxAnnualLossPMA, 0);
+
+      // % Participación en la PEA Total del Banco
+      const peaSharePct =
+        globalBankPEA > 0 ? Math.round((pTotalPEA / globalBankPEA) * 100) : 0;
+
+      // Promedios Inmanente vs. Residual
+      const avgInherentScore =
+        risksCount > 0
+          ? Number(
+              (
+                pRisks.reduce((s, r) => s + (r.inherentScore || 0), 0) /
+                risksCount
+              ).toFixed(1)
+            )
+          : 0;
+
+      const avgResidualScore =
+        risksCount > 0
+          ? Number(
+              (
+                pRisks.reduce((s, r) => s + (r.residualScore || 0), 0) /
+                risksCount
+              ).toFixed(1)
+            )
+          : 0;
+
+      // Efectividad de Mitigación Art. 88 CUB (% reducción Inherente -> Residual)
+      const totalInh = pRisks.reduce((s, r) => s + (r.inherentScore || 0), 0);
+      const totalRes = pRisks.reduce((s, r) => s + (r.residualScore || 0), 0);
+      const mitigationEffectivenessPct =
+        totalInh > 0
+          ? Math.max(0, Math.round(((totalInh - totalRes) / totalInh) * 100))
+          : 0;
+
+      // Conteo de Controles No Formalizados (NF) o riesgos sin controles
+      const nfControlsCount = pRisks.filter(
+        (r) =>
+          !r.controls ||
+          r.controls.length === 0 ||
+          r.controls.some(
+            (c) => !c.control?.isFormalized || !c.control?.hasValidEvidence
+          )
+      ).length;
+
+      // Presupuesto y Consumo de Apetito RAF asignado al Proceso
+      const pAppetitePEA = p.isCriticalBCP ? 12_000_000 : 10_000_000;
+      const pTolerancePEA = p.isCriticalBCP ? 18_000_000 : 15_000_000;
+      const pLimitPEA = p.isCriticalBCP ? 24_000_000 : 20_000_000;
+      const pRafZone = calculateRafZone(
+        pTotalPEA,
+        "HIGHER_IS_WORSE",
+        pAppetitePEA,
+        pTolerancePEA,
+        pLimitPEA
+      );
+      const appetiteConsumptionPct =
+        pAppetitePEA > 0 ? Math.round((pTotalPEA / pAppetitePEA) * 100) : 0;
+
+      const processRafThreshold = {
+        id: `RAF-${p.id}`,
+        metricCode: `RAF-${p.code}`,
+        metricName: `Presupuesto PEA (${p.code})`,
+        currentValue: pTotalPEA,
+        appetiteValue: pAppetitePEA,
+        toleranceValue: pTolerancePEA,
+        regulatoryLimitValue: pLimitPEA,
+        capacityValue: pLimitPEA * 1.25,
+        currentZone: pRafZone,
+        unit: "MXN",
+        direction: "HIGHER_IS_WORSE",
+        appetiteConsumptionPct,
+      };
+
+      // Vinculación directa con Indicador RAF / KRI Rector
+      const cclTh = rafThresholds.find((t) => t.metricCode === "CCL");
+      const icapTh = rafThresholds.find((t) => t.metricCode === "ICAP");
+      const speiTh = rafThresholds.find((t) => t.metricCode === "SPEI_AVAIL");
+      const cet1Th = rafThresholds.find((t) => t.metricCode === "CET1");
+      const imoraTh = rafThresholds.find(
+        (t) => t.metricCode === "IMORA" || t.metricCode === "IMOR_PYME"
+      );
+      const agroKri = kris.find(
+        (k) => k.code === "KRI-AGRO-02" || k.riskEvent?.process?.code === "PR-AGRO-01"
+      );
+
+      let primaryKriMetric: {
+        code: string;
+        name: string;
+        value: string;
+        unit: string;
+        zone: "GREEN" | "YELLOW" | "ORANGE" | "RED";
+        type: "RAF" | "KRI" | "RESIDUAL";
+      };
+
+      if (p.code === "PR-AGRO-01") {
+        if (imoraTh) {
+          primaryKriMetric = {
+            code: imoraTh.metricCode,
+            name: "Índice de Morosidad Agro (IMORA)",
+            value: `${imoraTh.currentValue}%`,
+            unit: "%",
+            zone: imoraTh.currentZone as any,
+            type: "RAF",
+          };
+        } else if (agroKri) {
+          primaryKriMetric = {
+            code: agroKri.code,
+            name: "Sequía Cartera Agro",
+            value: `${agroKri.currentValue}%`,
+            unit: "%",
+            zone: agroKri.currentZone as any,
+            type: "KRI",
+          };
+        } else {
+          primaryKriMetric = {
+            code: cet1Th?.metricCode || "CET1",
+            name: "Solvencia Comercial CET1",
+            value: `${cet1Th?.currentValue || 10.42}%`,
+            unit: "%",
+            zone: (cet1Th?.currentZone as any) || "GREEN",
+            type: "RAF",
+          };
+        }
+      } else if (p.code === "PR-TES-01") {
+        primaryKriMetric = {
+          code: "CCL",
+          name: "Cobertura de Liquidez (CCL 30D)",
+          value: `${cclTh?.currentValue || 114.5}%`,
+          unit: "%",
+          zone: (cclTh?.currentZone as any) || "YELLOW",
+          type: "RAF",
+        };
+      } else if (p.code === "PR-CRED-02" || p.code === "PR-GAR-01") {
+        primaryKriMetric = {
+          code: "ICAP",
+          name: "Capitalización Regulatoria (ICAP)",
+          value: `${icapTh?.currentValue || 13.85}%`,
+          unit: "%",
+          zone: (icapTh?.currentZone as any) || "GREEN",
+          type: "RAF",
+        };
+      } else if (p.code === "PR-TI-01") {
+        primaryKriMetric = {
+          code: "SPEI_AVAIL",
+          name: "Disponibilidad Enlace SPEI",
+          value: `${speiTh?.currentValue || 99.96}%`,
+          unit: "%",
+          zone: (speiTh?.currentZone as any) || "GREEN",
+          type: "RAF",
+        };
+      } else {
+        const procKri = kris.find(
+          (k) => k.riskEvent?.process?.code === p.code || k.code.includes(p.code)
+        );
+        if (procKri) {
+          primaryKriMetric = {
+            code: procKri.code,
+            name: procKri.name,
+            value: `${procKri.currentValue}%`,
+            unit: "%",
+            zone: procKri.currentZone as any,
+            type: "KRI",
+          };
+        } else {
+          primaryKriMetric = {
+            code: "SEV_MEDIA",
+            name: "Severidad Residual Media",
+            value: `${avgResidualScore}/25`,
+            unit: "Score",
+            zone: dominantZone as any,
+            type: "RESIDUAL",
+          };
+        }
+      }
 
       const plansCount = pRisks.reduce(
         (sum, r) => sum + (r.actionPlans?.length || 0),
@@ -344,6 +536,13 @@ export async function GET(request: Request) {
         dominantZone,
         totalPEA: pTotalPEA,
         totalPMA: pTotalPMA,
+        peaSharePct,
+        avgInherentScore,
+        avgResidualScore,
+        mitigationEffectivenessPct,
+        nfControlsCount,
+        processRafThreshold,
+        primaryKriMetric,
         plansCount,
         quickWinsCount: quickWins,
         orphanRisksCount: pOrphanRisks,

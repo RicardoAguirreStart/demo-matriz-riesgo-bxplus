@@ -58,3 +58,24 @@ export function getZoneLabel(zone: RAFZone | string): string {
       return zone;
   }
 }
+
+export function calculateRafZone(
+  current: number,
+  direction: string,
+  appetite: number,
+  tolerance: number,
+  regLimit: number
+): "GREEN" | "YELLOW" | "ORANGE" | "RED" {
+  if (direction === "HIGHER_IS_WORSE") {
+    if (current <= appetite) return "GREEN";
+    if (current <= tolerance) return "YELLOW";
+    if (current <= regLimit) return "ORANGE";
+    return "RED";
+  } else {
+    // LOWER_IS_WORSE (e.g. ICAP, CET1, CCL, SPEI_AVAIL)
+    if (current >= appetite) return "GREEN";
+    if (current >= tolerance) return "YELLOW";
+    if (current >= regLimit) return "ORANGE";
+    return "RED";
+  }
+}

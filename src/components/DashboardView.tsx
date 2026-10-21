@@ -22,6 +22,7 @@ import {
   BarChart3,
   Network,
   RotateCcw,
+  Link2,
 } from "lucide-react";
 
 interface DashboardViewProps {
@@ -337,16 +338,32 @@ export function DashboardView({
         {/* Grid Balanceado 2 Filas x 3 Columnas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rafThresholds?.map((th: any) => {
+            const isDirectProcessMetric =
+              selectedProcessId !== "ALL" &&
+              (th.associatedProcessCode === activeProcessObj?.code ||
+                (th.metricCode === "PEA_OP" && activeProcessObj));
+
             return (
               <div
                 key={th.id}
-                className="bg-white rounded-bx p-4 shadow-card border border-gray-200 hover:shadow-card-hover transition-all flex flex-col justify-between"
+                className={`rounded-bx p-4 shadow-card border transition-all flex flex-col justify-between ${
+                  isDirectProcessMetric
+                    ? "bg-[#F9FCFD] border-[#3299A8] ring-2 ring-[#3299A8]/20 shadow-md"
+                    : "bg-white border-gray-200 hover:shadow-card-hover"
+                }`}
               >
                 <div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-[11px] font-bold text-gray-500 tracking-wide font-mono">
-                      {th.metricCode}
-                    </span>
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold text-gray-700 tracking-wide font-mono">
+                        {th.metricCode}
+                      </span>
+                      {isDirectProcessMetric && (
+                        <span className="text-[9px] font-bold text-teal-900 bg-teal-100 border border-teal-300 px-1.5 py-0.5 rounded uppercase">
+                          Métrica Directa del Proceso
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-[3px] inline-flex items-center gap-1.5 ${getZoneBadgeClasses(
                         th.currentZone
@@ -385,6 +402,16 @@ export function DashboardView({
                     </div>
                     <div className="text-xs font-medium text-gray-600 truncate mt-0.5">
                       {th.metricName}
+                    </div>
+
+                    {/* Vínculo Proceso Bancario */}
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500 font-mono">
+                      <Link2 className="w-3 h-3 text-[#3299A8] shrink-0" />
+                      <span className="truncate">
+                        {th.associatedProcessCode === "ALL"
+                          ? "Transversal: Todos los Procesos"
+                          : `Proceso Clave: ${th.associatedProcessCode} (${th.associatedProcessLabel})`}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -641,16 +668,16 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* 3. SECCIÓN 3 (NUEVA): RADIOGRAFÍA DE EXPOSICIÓN Y GOBERNANZA POR PROCESO BANCARIO */}
+      {/* 3. SECCIÓN 3: RADIOGRAFÍA DE EXPOSICIÓN, APETITO RAF Y GOBERNANZA POR PROCESO */}
       <div className="bg-white rounded-bx p-5 shadow-card border border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-100">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800 flex items-center gap-2">
               <Network className="w-4 h-4 text-[#3299A8]" />
-              <span>Exposición y Gobernanza por Proceso Bancario (Cadena de Valor B×+)</span>
+              <span>Exposición, Apetito RAF y Gobernanza por Proceso Bancario</span>
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Radiografía comparativa de criticidad BCP, severidad 5×5, pérdidas esperadas y cobertura de planes de mitigación. Haz clic en un proceso para aislar sus métricas.
+              Radiografía comparativa de consumo de apetito RAF, indicador rector, efectividad de mitigación Art. 88 CUB y cobertura 3LD por proceso. Haz clic en un proceso para aislar sus métricas.
             </p>
           </div>
           {selectedProcessId !== "ALL" && (
@@ -673,114 +700,175 @@ export function DashboardView({
                 onClick={() =>
                   setSelectedProcessId(isSelected ? "ALL" : p.id)
                 }
-                className={`cursor-pointer rounded-lg p-3.5 border transition-all ${
+                className={`cursor-pointer rounded-lg p-4 border transition-all flex flex-col justify-between ${
                   isSelected
                     ? "border-[#3299A8] bg-[#F0F8FA] ring-2 ring-[#3299A8]/20 shadow-sm"
                     : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-card"
                 }`}
               >
-                {/* Header de la Tarjeta */}
-                <div className="flex items-start justify-between gap-1">
-                  <span className="font-mono text-xs font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded">
-                    {p.code}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {p.isCriticalBCP && (
-                      <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded uppercase">
-                        BCP Crítico
+                <div>
+                  {/* Header de la Tarjeta */}
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="font-mono text-xs font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded">
+                      {p.code}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {p.isCriticalBCP && (
+                        <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded uppercase">
+                          BCP Crítico
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                          p.processRafThreshold?.currentZone === "RED" || p.dominantZone === "RED"
+                            ? "bg-rose-100 text-rose-800"
+                            : p.processRafThreshold?.currentZone === "ORANGE" || p.dominantZone === "ORANGE"
+                            ? "bg-orange-100 text-orange-800"
+                            : p.processRafThreshold?.currentZone === "YELLOW" || p.dominantZone === "YELLOW"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {p.processRafThreshold?.currentZone || p.dominantZone}
                       </span>
+                    </div>
+                  </div>
+
+                  <h3 className="font-bold text-xs text-gray-900 mt-2 line-clamp-1 leading-snug">
+                    {p.name}
+                  </h3>
+                  <div className="text-[10px] text-gray-500 truncate">
+                    {p.macroProcessName}
+                  </div>
+
+                  {/* Píldora Destacada de KRI / RAF Clave del Proceso */}
+                  {p.primaryKriMetric && (
+                    <div className="mt-2.5 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200 flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            p.primaryKriMetric.zone === "GREEN"
+                              ? "bg-emerald-500"
+                              : p.primaryKriMetric.zone === "YELLOW"
+                              ? "bg-amber-500"
+                              : p.primaryKriMetric.zone === "ORANGE"
+                              ? "bg-orange-500"
+                              : "bg-rose-500"
+                          }`}
+                        />
+                        <span className="text-[10px] text-gray-600 truncate font-medium">
+                          Indicador Rector: <strong className="text-gray-900">{p.primaryKriMetric.code}</strong>
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-gray-900 shrink-0">
+                        {p.primaryKriMetric.value}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Bloque Central: Métrica de Consumo de Apetito RAF del Proceso */}
+                  <div className="mt-3 pt-2.5 border-t border-gray-100">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-gray-600 font-semibold">
+                        Consumo Apetito PEA:
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-gray-900 text-xs">
+                          {p.processRafThreshold?.appetiteConsumptionPct || 0}%
+                        </span>
+                        <span className="text-[9px] font-mono text-teal-800 bg-teal-50 border border-teal-200 px-1 py-0.2 rounded font-semibold">
+                          {p.peaSharePct}% PEA B×+
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-500 font-mono mb-1">
+                      <div>PEA: <strong className="text-gray-900">{formatMXN(p.totalPEA)}</strong></div>
+                      <div>PMA: <strong className="text-orange-700">{formatMXN(p.totalPMA)}</strong></div>
+                    </div>
+
+                    {/* Barra de Umbrales RAF del Proceso */}
+                    {p.processRafThreshold && (
+                      <RafProgressBar threshold={p.processRafThreshold} />
                     )}
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
-                        p.dominantZone === "RED"
-                          ? "bg-rose-100 text-rose-800"
-                          : p.dominantZone === "ORANGE"
-                          ? "bg-orange-100 text-orange-800"
-                          : p.dominantZone === "YELLOW"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
-                      }`}
-                    >
-                      {p.dominantZone}
-                    </span>
+                  </div>
+
+                  {/* Bloque Inferior: Mitigación Art. 88 CUB */}
+                  <div className="mt-3 pt-2.5 border-t border-gray-100">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-gray-600 font-medium">Mitigación Art. 88 CUB:</span>
+                      <span className="font-mono font-bold text-emerald-700">
+                        -{p.mitigationEffectivenessPct}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-gray-500 mt-0.5 font-mono">
+                      <span>Score: {p.avgInherentScore} → {p.avgResidualScore}</span>
+                      <span
+                        className={
+                          p.nfControlsCount > 0
+                            ? "text-amber-700 font-semibold"
+                            : "text-emerald-700 font-semibold"
+                        }
+                      >
+                        {p.nfControlsCount} c/Control NF
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <h3 className="font-bold text-xs text-gray-900 mt-2 line-clamp-1 leading-snug">
-                  {p.name}
-                </h3>
-                <div className="text-[10px] text-gray-500 truncate">
-                  {p.macroProcessName}
-                </div>
+                {/* Conteo de Nodos, Cobertura y Huérfanos */}
+                <div className="mt-3 pt-2.5 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-[10px] text-gray-600">
+                    <span>{p.nodesCount} nodos de flujo</span>
+                    <div className="flex items-center gap-1 font-mono">
+                      <span className="text-rose-700 font-bold" title="Rojos">
+                        {p.zoneCounts.RED}R
+                      </span>
+                      <span className="text-orange-700 font-bold" title="Naranjas">
+                        {p.zoneCounts.ORANGE}N
+                      </span>
+                      <span className="text-amber-700 font-bold" title="Amarillos">
+                        {p.zoneCounts.YELLOW}A
+                      </span>
+                      <span className="text-emerald-700 font-bold" title="Verdes">
+                        {p.zoneCounts.GREEN}V
+                      </span>
+                    </div>
+                  </div>
 
-                {/* Métricas Operativas */}
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-gray-100 text-[11px]">
-                  <div>
-                    <span className="text-gray-500 block text-[10px]">Pérdida Esperada (PEA):</span>
-                    <strong className="font-mono text-gray-900 font-semibold">
-                      {formatMXN(p.totalPEA)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 block text-[10px]">Pérdida Máxima (PMA):</span>
-                    <strong className="font-mono text-orange-700 font-semibold">
-                      {formatMXN(p.totalPMA)}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Conteo de Riesgos y Nodos */}
-                <div className="flex items-center justify-between text-[10px] text-gray-600 mt-2 pt-2 border-t border-gray-100">
-                  <span>{p.nodesCount} nodos de flujo</span>
-                  <div className="flex items-center gap-1 font-mono">
-                    <span className="text-rose-700 font-bold" title="Rojos">
-                      {p.zoneCounts.RED}R
-                    </span>
-                    <span className="text-orange-700 font-bold" title="Naranjas">
-                      {p.zoneCounts.ORANGE}N
-                    </span>
-                    <span className="text-amber-700 font-bold" title="Amarillos">
-                      {p.zoneCounts.YELLOW}A
-                    </span>
-                    <span className="text-emerald-700 font-bold" title="Verdes">
-                      {p.zoneCounts.GREEN}V
-                    </span>
-                  </div>
-                </div>
-
-                {/* Barra de Cobertura de Mitigación */}
-                <div className="mt-2.5">
-                  <div className="flex justify-between text-[10px] mb-1">
-                    <span className="text-gray-500">Cobertura Planes:</span>
-                    <strong className="font-mono text-gray-800">
-                      {p.coveragePct}% ({p.risksCount - p.orphanRisksCount}/{p.risksCount})
-                    </strong>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className={`h-1.5 rounded-full ${
-                        p.coveragePct >= 60
-                          ? "bg-emerald-500"
-                          : p.coveragePct >= 30
-                          ? "bg-amber-500"
-                          : "bg-rose-500"
-                      }`}
-                      style={{ width: `${p.coveragePct}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] text-gray-500 mt-1">
-                    <span className="text-teal-700 font-medium">
-                      {p.quickWinsCount} Quick-Wins
-                    </span>
-                    <span
-                      className={
-                        p.orphanRisksCount > 0
-                          ? "text-amber-700 font-medium"
-                          : "text-emerald-700 font-medium"
-                      }
-                    >
-                      {p.orphanRisksCount} Huérfanos
-                    </span>
+                  <div className="mt-2">
+                    <div className="flex justify-between text-[10px] mb-1">
+                      <span className="text-gray-500">Cobertura Planes:</span>
+                      <strong className="font-mono text-gray-800">
+                        {p.coveragePct}% ({p.risksCount - p.orphanRisksCount}/{p.risksCount})
+                      </strong>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-1.5 rounded-full ${
+                          p.coveragePct >= 60
+                            ? "bg-emerald-500"
+                            : p.coveragePct >= 30
+                            ? "bg-amber-500"
+                            : "bg-rose-500"
+                        }`}
+                        style={{ width: `${p.coveragePct}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-gray-500 mt-1">
+                      <span className="text-teal-700 font-medium">
+                        {p.quickWinsCount} Quick-Wins
+                      </span>
+                      <span
+                        className={
+                          p.orphanRisksCount > 0
+                            ? "text-amber-700 font-medium"
+                            : "text-emerald-700 font-medium"
+                        }
+                      >
+                        {p.orphanRisksCount} Huérfanos
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

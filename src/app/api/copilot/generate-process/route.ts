@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Descripción del proceso requerida" }, { status: 400 });
     }
 
-    // ACCIÓN 1: MODO ENTREVISTA CONVERSACIONAL (Preguntas guiadas + chips sugeridos)
+    // ACCIÓN 1: MODO ENTREVISTA CONVERSACIONAL (Preguntas guiadas + chips sugeridos contextuales)
     if (action === "INTERVIEW") {
       try {
         if (apiKey) {
@@ -46,9 +46,18 @@ Formula de 3 a 4 preguntas puntuales clave sobre:
 4. Puntos de control normativos (validación de poderes, colaterales E*, biometría o filtro ASG/DNSH).
 
 REGLA OBLIGATORIA DE FORMATO:
-- Devuelve ÚNICAMENTE texto en lenguaje natural y fluido.
-- NUNCA uses formato Markdown: NO uses asteriscos dobles (**negrita**), NO uses asteriscos simples (*cursiva*), NO uses viñetas con asterisco (* item) ni encabezados con numeral (#).
-- Usa numeración limpia (1., 2., 3.) o guiones limpios (-) sin asteriscos.`,
+- Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
+{
+  "reply": "string: tus 3 a 4 preguntas conversacionales en texto fluido y limpio. NUNCA uses formato Markdown: NO uses asteriscos dobles (**), NO uses asteriscos simples (*), NO uses viñetas con asterisco ni encabezados con numeral (#).",
+  "suggestedQuickReplies": [
+    "opción breve 1",
+    "opción breve 2",
+    "opción breve 3"
+  ]
+}
+IMPORTANTE SOBRE LAS OPCIONES ("suggestedQuickReplies"):
+- Las opciones DEBEN SER ALTAMENTE ESPECÍFICAS Y RELEVANTES para el tema exacto que el usuario mencionó (por ejemplo, si habla de Tesorería o Mesa de Dinero, pon respuestas de Tesorería como 'Mesa Interbancaria y Posición NAFIN', 'Límite de Riesgo de Mercado Banxico', 'Liquidación en Línea SPEI / SIAC'; si habla de Arrendamiento o Factoraje, pon opciones correspondientes).
+- Si no tienes 2 o 3 opciones verdaderamente útiles y pertinentes para el proceso en cuestión, devuelve un arreglo vacío [] en "suggestedQuickReplies".`,
           });
 
           const conversationText = messages
@@ -56,28 +65,43 @@ REGLA OBLIGATORIA DE FORMATO:
             .join("\n");
 
           const prompt = `Conversación previa:\n${conversationText}\n\nNueva propuesta del usuario: "${processDescription}".
-Haz las 3 a 4 preguntas clave y sugiere opciones directas de respuesta sin ningún formato markdown ni asteriscos.`;
+Haz las 3 a 4 preguntas clave y sugiere 2 a 3 opciones rápidas si son totalmente afines al tema, o devuelve arreglo vacío si no aplican.`;
 
           const result = await model.generateContent(prompt);
           const rawAnswer = (await result.response).text();
-          const cleanAnswer = stripMarkdownSyntax(rawAnswer);
+
+          let cleanAnswer = "";
+          let quickReplies: string[] = [];
+
+          try {
+            const jsonMatch = rawAnswer.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              cleanAnswer = stripMarkdownSyntax(parsed.reply || rawAnswer);
+              if (Array.isArray(parsed.suggestedQuickReplies)) {
+                quickReplies = parsed.suggestedQuickReplies
+                  .map((q: any) => stripMarkdownSyntax(String(q)))
+                  .filter((q: string) => q.length > 0 && q.length < 60)
+                  .slice(0, 4);
+              }
+            } else {
+              cleanAnswer = stripMarkdownSyntax(rawAnswer);
+            }
+          } catch {
+            cleanAnswer = stripMarkdownSyntax(rawAnswer);
+          }
 
           return NextResponse.json({
             success: true,
             reply: cleanAnswer,
-            suggestedQuickReplies: [
-              "Segmento PyME con Buró + Core T24",
-              "Umbral Comité: Créditos > $5,000,000 MXN",
-              "Filtro ASG + Control Dual de Liberación",
-              "Integración Banxico SPEI en Tiempo Real (d+0)",
-            ],
+            suggestedQuickReplies: quickReplies,
           });
         }
       } catch (err) {
         console.error("Gemini interview fallback triggered:", err);
       }
 
-      // Fallback determinista para entrevista sin markdown
+      // Fallback determinista para entrevista sin markdown ni opciones descontextualizadas
       return NextResponse.json({
         success: true,
         reply: `Excelente propuesta para modelar "${processDescription}" en Banco B×+. Para estructurar el diagrama con máxima precisión regulatoria y de control, por favor indícame:
@@ -88,12 +112,7 @@ Haz las 3 a 4 preguntas clave y sugiere opciones directas de respuesta sin ning�
 4. Puntos de Control: ¿Se requiere validación dual de expedientes, aforo de garantías (E*) o filtro ambiental ASG?
 
 Puedes contestar estas preguntas o presionar directamente el botón "Construir Diagrama Completo Ahora".`,
-        suggestedQuickReplies: [
-          "Segmento PyME con Buró + Core T24",
-          "Umbral Comité: Créditos > $5,000,000 MXN",
-          "Filtro ASG + Control Dual de Liberación",
-          "Integración Banxico SPEI en Tiempo Real (d+0)",
-        ],
+        suggestedQuickReplies: [],
       });
     }
 

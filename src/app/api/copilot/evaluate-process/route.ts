@@ -97,16 +97,21 @@ export async function POST(request: Request) {
           systemInstruction: `Eres el Evaluador Principal de Riesgos y Controles de Grupo Financiero Ve por Más (B×+).
 Tu misión es auditar el diagrama de flujo operativo de extremo a extremo, evaluando riesgos de contagio con otros procesos del banco (Cross-Process), brechas en compuertas de decisión y vulnerabilidades regulatorias CUB / Circular 8/2019 Banxico / NIF C-16.
 
+REGLAS CRÍTICAS DE REDACCIÓN (OBLIGATORIAS):
+1. En "executiveDiagnosis", "crossProcessInsights" y en todas las descripciones de riesgos ("cause", "eventDescription", "consequence", etc.), NUNCA menciones los identificadores alfanuméricos técnicos de base de datos (por ejemplo, NUNCA escribas "cmvicw...", "cuid...", ni claves de base de datos).
+2. Refiérete SIEMPRE a las figuras, etapas y procesos por sus NOMBRES FORMALES Y ETIQUETAS HUMANAS ENTRE COMILLAS (ej. 'Paso: Cotejo Documental', 'Rombo de Decisión: ¿Califica Score?', 'Punto de Control: Candado PLD', 'Proceso PR-TES-01: Mesa de Dinero').
+3. El campo "processNodeId" dentro de "detectedRisks" es el ÚNICO lugar donde debes colocar el ID técnico del nodo para poder anclar el riesgo al diagrama.
+
 Debes devolver EXCLUSIVAMENTE un JSON válido con esta estructura:
 {
-  "executiveDiagnosis": "Diagnóstico integral del proceso y su robustez normativa frente a la CUB",
+  "executiveDiagnosis": "Diagnóstico integral del proceso y su robustez normativa frente a la CUB (usando nombres comerciales, sin IDs alfanuméricos)",
   "crossProcessInsights": [
-    "string: análisis de dependencia o contagio con otros procesos y sistemas compartidos (ej. T24, SPEI)"
+    "string: análisis de dependencia o contagio con otros procesos y sistemas compartidos (ej. T24, SPEI, Tesorería) usando nombres legibles, NUNCA IDs técnicos"
   ],
   "detectedRisks": [
     {
-      "processNodeId": "id exacto del nodo donde se origina el riesgo",
-      "nodeLabel": "nombre del nodo",
+      "processNodeId": "id exacto del nodo donde se origina el riesgo (único campo donde va el ID)",
+      "nodeLabel": "nombre legible del nodo",
       "title": "título técnico del riesgo",
       "cause": "Causa raíz estructurada",
       "eventDescription": "Evento operacional, crediticio o tecnológico",
@@ -216,7 +221,35 @@ Genera entre 3 y 5 riesgos detectados altamente específicos, priorizando brecha
       };
     }
 
-    // Vincular cada riesgo al taxonomyId correspondiente
+    // Sanitizar cualquier referencia accidental a CUIDs de base de datos en los textos del análisis
+    const idToLabelMap: Record<string, string> = {};
+    currentProcess.flowNodes.forEach((n) => {
+      idToLabelMap[n.id] = n.label;
+    });
+    otherProcesses.forEach((p) => {
+      idToLabelMap[p.id] = `${p.code} (${p.name})`;
+    });
+
+    const sanitizeCuidReferences = (text: string): string => {
+      if (!text) return "";
+      let sanitized = text;
+      for (const [id, label] of Object.entries(idToLabelMap)) {
+        sanitized = sanitized.split(id).join(`"${label}"`);
+      }
+      sanitized = sanitized.replace(/cmv[a-z0-9]{20,}/gi, "Paso del proceso");
+      return sanitized;
+    };
+
+    if (evaluationResult.executiveDiagnosis) {
+      evaluationResult.executiveDiagnosis = sanitizeCuidReferences(evaluationResult.executiveDiagnosis);
+    }
+    if (Array.isArray(evaluationResult.crossProcessInsights)) {
+      evaluationResult.crossProcessInsights = evaluationResult.crossProcessInsights.map((ins: string) =>
+        sanitizeCuidReferences(ins)
+      );
+    }
+
+    // Vincular cada riesgo al taxonomyId correspondiente y sanitizar textos
     evaluationResult.detectedRisks = evaluationResult.detectedRisks.map((dr: any) => {
       const matchedTax =
         taxonomies.find((t) => t.riskType === dr.riskType) ||
@@ -224,6 +257,11 @@ Genera entre 3 y 5 riesgos detectados altamente específicos, priorizando brecha
         taxonomies[0];
       return {
         ...dr,
+        title: sanitizeCuidReferences(dr.title),
+        cause: sanitizeCuidReferences(dr.cause),
+        eventDescription: sanitizeCuidReferences(dr.eventDescription),
+        consequence: sanitizeCuidReferences(dr.consequence),
+        recommendedControl: sanitizeCuidReferences(dr.recommendedControl),
         taxonomyId: matchedTax?.id,
         taxonomyCode: matchedTax?.code,
         businessUnitId: currentProcess.macroProcess.businessUnitId,

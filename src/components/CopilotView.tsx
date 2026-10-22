@@ -90,20 +90,24 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
   }, [chatMessages, chatLoading, activeSubTab]);
 
   // 1. Cargar lista de procesos
-  useEffect(() => {
-    async function loadProcesses() {
-      try {
-        const res = await fetch("/api/processes");
-        const data = await res.json();
-        if (data.success && data.processes) {
-          setProcesses(data.processes);
+  const loadProcesses = useCallback(async () => {
+    try {
+      const res = await fetch("/api/processes");
+      const data = await res.json();
+      if (data.success && data.processes) {
+        setProcesses(data.processes);
+        if (selectedProcessId !== "ALL" && !data.processes.some((p: any) => p.id === selectedProcessId)) {
+          setSelectedProcessId("ALL");
         }
-      } catch (e) {
-        console.error("Error loading processes:", e);
       }
+    } catch (e) {
+      console.error("Error loading processes:", e);
     }
+  }, [selectedProcessId]);
+
+  useEffect(() => {
     loadProcesses();
-  }, []);
+  }, [loadProcesses]);
 
   // 2. Ejecutar Simulación de Estrés
   const handleRunStressSimulation = useCallback(
@@ -158,6 +162,16 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
     handleRunStressSimulation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sincronización en tiempo real ante eliminación de procesos
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      loadProcesses();
+      handleRunStressSimulation({ procId: "ALL" });
+    };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
+  }, [loadProcesses, handleRunStressSimulation]);
 
   // 4. Presets de 1 Clic
   const handleApplyPreset = (presetKey: "AGRO" | "TECH" | "RECESSION" | "CONTROLS") => {

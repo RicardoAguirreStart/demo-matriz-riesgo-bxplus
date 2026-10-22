@@ -62,6 +62,177 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Elimina un proceso bancario y ejecuta la cascada exhaustiva en transacción atómica:
+ * 1. Desvincula controles asociados a los nodos del proceso.
+ * 2. Identifica todos los riesgos asociados (por processId o por processNodeId).
+ * 3. Elimina en orden estricto de integridad referencial:
+ *    - Mapeos de control (RiskControlMap)
+ *    - Evidencias de planes de acción (ActionPlanEvidence)
+ *    - Planes de acción (ActionPlan)
+ *    - Mediciones de KRI (KRIMeasurement)
+ *    - Indicadores KRI (KRI)
+ *    - Eventos de pérdida (LossEvent)
+ *    - Snapshots históricos (RiskMatrixSnapshot)
+ *    - Eventos de riesgo (RiskEvent)
+ * 4. Elimina conectores de diagrama (ProcessEdge)
+ * 5. Elimina nodos de diagrama (ProcessNode)
+ * 6. Elimina subprocesos (SubProcess)
+ * 7. Elimina el proceso bancario (Process)
+ * 8. Registra evento inalterable en Bitácora de Auditoría (AuditLog con SHA-256)
+ */
+async function deleteProcessWithCascade(processId: string, userRole: RoleType = "UAIR_ADMIN") {
+  const processToDelete = await prisma.process.findUnique({
+    where: { id: processId },
+    include: {
+      macroProcess: true,
+      _count: {
+        select: {
+          flowNodes: true,
+          flowEdges: true,
+          riskEvents: true,
+        },
+      },
+    },
+  });
+
+  if (!processToDelete) {
+    return { success: false, status: 404, error: "Proceso no encontrado" };
+  }
+
+  // Ejecución transaccional atómica
+  await prisma.$transaction(async (tx) => {
+    // 1. Obtener nodos
+    const nodes = await tx.processNode.findMany({
+      where: { processId },
+      select: { id: true },
+    });
+    const nodeIds = nodes.map((n) => n.id);
+
+    // 2. Desvincular controles asignados a estos nodos
+    if (nodeIds.length > 0) {
+      await tx.control.updateMany({
+        where: { processNodeId: { in: nodeIds } },
+        data: { processNodeId: null },
+      });
+    }
+
+    // 3. Localizar todos los riesgos vinculados (por processId o por sus nodos)
+    const risks = await tx.riskEvent.findMany({
+      where: {
+        OR: [
+          { processId },
+          ...(nodeIds.length > 0 ? [{ processNodeId: { in: nodeIds } }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    const riskIds = risks.map((r) => r.id);
+
+    if (riskIds.length > 0) {
+      // 3.1 Mapeos de control
+      await tx.riskControlMap.deleteMany({
+        where: { riskEventId: { in: riskIds } },
+      });
+
+      // 3.2 Evidencias de planes y planes de acción
+      const plans = await tx.actionPlan.findMany({
+        where: { riskEventId: { in: riskIds } },
+        select: { id: true },
+      });
+      const planIds = plans.map((p) => p.id);
+      if (planIds.length > 0) {
+        await tx.actionPlanEvidence.deleteMany({
+          where: { actionPlanId: { in: planIds } },
+        });
+        await tx.actionPlan.deleteMany({
+          where: { id: { in: planIds } },
+        });
+      }
+
+      // 3.3 Mediciones de KRIs y KRIs
+      const kris = await tx.kRI.findMany({
+        where: { riskEventId: { in: riskIds } },
+        select: { id: true },
+      });
+      const kriIds = kris.map((k) => k.id);
+      if (kriIds.length > 0) {
+        await tx.kRIMeasurement.deleteMany({
+          where: { kriId: { in: kriIds } },
+        });
+        await tx.kRI.deleteMany({
+          where: { id: { in: kriIds } },
+        });
+      }
+
+      // 3.4 Eventos de pérdida
+      await tx.lossEvent.deleteMany({
+        where: { riskEventId: { in: riskIds } },
+      });
+
+      // 3.5 Snapshots de matriz 5x5
+      await tx.riskMatrixSnapshot.deleteMany({
+        where: { riskEventId: { in: riskIds } },
+      });
+
+      // 3.6 Eventos de riesgo
+      await tx.riskEvent.deleteMany({
+        where: { id: { in: riskIds } },
+      });
+    }
+
+    // 4. Conectores de flujo
+    await tx.processEdge.deleteMany({
+      where: { processId },
+    });
+
+    // 5. Nodos de flujo
+    await tx.processNode.deleteMany({
+      where: { processId },
+    });
+
+    // 6. Subprocesos
+    await tx.subProcess.deleteMany({
+      where: { processId },
+    });
+
+    // 7. Proceso
+    await tx.process.delete({
+      where: { id: processId },
+    });
+  });
+
+  // 8. Registro de auditoría criptográfica SHA-256
+  const user =
+    (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
+    (await prisma.user.findFirst());
+
+  if (user) {
+    await recordAuditLog({
+      userId: user.id,
+      userRole: userRole as RoleType,
+      actionType: "DELETE_PROCESS",
+      entityName: "Process",
+      entityId: processId,
+      previousState: {
+        code: processToDelete.code,
+        name: processToDelete.name,
+        macroProcess: processToDelete.macroProcess?.name,
+        nodesCount: processToDelete._count.flowNodes,
+        risksCount: processToDelete._count.riskEvents,
+      },
+      newState: null,
+    });
+  }
+
+  return {
+    success: true,
+    message: `Proceso "${processToDelete.name}" (${processToDelete.code}) y todas sus dependencias (riesgos, planes, KRIs y nodos) eliminados exitosamente.`,
+    deletedProcessId: processId,
+    deletedProcessCode: processToDelete.code,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -225,69 +396,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "processId requerido" }, { status: 400 });
       }
 
-      const processToDelete = await prisma.process.findUnique({
-        where: { id: processId },
-      });
-
-      if (!processToDelete) {
-        return NextResponse.json({ success: false, error: "Proceso no encontrado" }, { status: 404 });
-      }
-
-      // 1. Desvincular controles de los nodos de este proceso
-      const nodes = await prisma.processNode.findMany({ where: { processId }, select: { id: true } });
-      const nodeIds = nodes.map((n) => n.id);
-
-      if (nodeIds.length > 0) {
-        await prisma.control.updateMany({
-          where: { processNodeId: { in: nodeIds } },
-          data: { processNodeId: null },
-        });
-      }
-
-      // 2. Desvincular o eliminar riesgos asociados al proceso
-      const risks = await prisma.riskEvent.findMany({ where: { processId }, select: { id: true } });
-      const riskIds = risks.map((r) => r.id);
-
-      if (riskIds.length > 0) {
-        await prisma.riskControlMap.deleteMany({ where: { riskEventId: { in: riskIds } } });
-        await prisma.kRI.deleteMany({ where: { riskEventId: { in: riskIds } } });
-        await prisma.lossEvent.deleteMany({ where: { riskEventId: { in: riskIds } } });
-        await prisma.actionPlan.deleteMany({ where: { riskEventId: { in: riskIds } } });
-        await prisma.riskMatrixSnapshot.deleteMany({ where: { riskEventId: { in: riskIds } } });
-        await prisma.riskEvent.deleteMany({ where: { id: { in: riskIds } } });
-      }
-
-      // 3. Eliminar aristas y nodos del proceso
-      await prisma.processEdge.deleteMany({ where: { processId } });
-      await prisma.processNode.deleteMany({ where: { processId } });
-      await prisma.subProcess.deleteMany({ where: { processId } });
-
-      // 4. Eliminar el proceso
-      await prisma.process.delete({
-        where: { id: processId },
-      });
-
-      // 5. Registrar en AuditLog SHA-256
-      const user =
-        (await prisma.user.findFirst({ where: { role: userRole as RoleType } })) ||
-        (await prisma.user.findFirst());
-
-      if (user) {
-        await recordAuditLog({
-          userId: user.id,
-          userRole: userRole as RoleType,
-          actionType: "DELETE_PROCESS",
-          entityName: "Process",
-          entityId: processId,
-          previousState: { code: processToDelete.code, name: processToDelete.name },
-          newState: null,
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `Proceso "${processToDelete.name}" (${processToDelete.code}) eliminado exitosamente.`,
-      });
+      const result = await deleteProcessWithCascade(processId, userRole as RoleType);
+      return NextResponse.json(result, { status: (result as any).status || (result.success ? 200 : 400) });
     }
 
     return NextResponse.json({ success: false, error: "Acción no reconocida" }, { status: 400 });
@@ -301,71 +411,14 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const processId = searchParams.get("processId");
+    const userRole = (searchParams.get("userRole") as RoleType) || "UAIR_ADMIN";
 
     if (!processId) {
       return NextResponse.json({ success: false, error: "processId requerido" }, { status: 400 });
     }
 
-    const processToDelete = await prisma.process.findUnique({
-      where: { id: processId },
-    });
-
-    if (!processToDelete) {
-      return NextResponse.json({ success: false, error: "Proceso no encontrado" }, { status: 404 });
-    }
-
-    // 1. Desvincular controles de los nodos
-    const nodes = await prisma.processNode.findMany({ where: { processId }, select: { id: true } });
-    const nodeIds = nodes.map((n) => n.id);
-
-    if (nodeIds.length > 0) {
-      await prisma.control.updateMany({
-        where: { processNodeId: { in: nodeIds } },
-        data: { processNodeId: null },
-      });
-    }
-
-    // 2. Eliminar riesgos asociados al proceso
-    const risks = await prisma.riskEvent.findMany({ where: { processId }, select: { id: true } });
-    const riskIds = risks.map((r) => r.id);
-
-    if (riskIds.length > 0) {
-      await prisma.riskControlMap.deleteMany({ where: { riskEventId: { in: riskIds } } });
-      await prisma.kRI.deleteMany({ where: { riskEventId: { in: riskIds } } });
-      await prisma.lossEvent.deleteMany({ where: { riskEventId: { in: riskIds } } });
-      await prisma.actionPlan.deleteMany({ where: { riskEventId: { in: riskIds } } });
-      await prisma.riskMatrixSnapshot.deleteMany({ where: { riskEventId: { in: riskIds } } });
-      await prisma.riskEvent.deleteMany({ where: { id: { in: riskIds } } });
-    }
-
-    // 3. Eliminar aristas, nodos y subprocesos
-    await prisma.processEdge.deleteMany({ where: { processId } });
-    await prisma.processNode.deleteMany({ where: { processId } });
-    await prisma.subProcess.deleteMany({ where: { processId } });
-
-    // 4. Eliminar el proceso
-    await prisma.process.delete({
-      where: { id: processId },
-    });
-
-    // 5. Auditoría SHA-256
-    const user = await prisma.user.findFirst();
-    if (user) {
-      await recordAuditLog({
-        userId: user.id,
-        userRole: user.role as RoleType,
-        actionType: "DELETE_PROCESS",
-        entityName: "Process",
-        entityId: processId,
-        previousState: { code: processToDelete.code, name: processToDelete.name },
-        newState: null,
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Proceso "${processToDelete.name}" (${processToDelete.code}) eliminado exitosamente.`,
-    });
+    const result = await deleteProcessWithCascade(processId, userRole);
+    return NextResponse.json(result, { status: (result as any).status || (result.success ? 200 : 400) });
   } catch (error) {
     console.error("Error deleting process:", error);
     return NextResponse.json({ success: false, error: "Error al eliminar proceso" }, { status: 500 });

@@ -206,6 +206,27 @@ export function DashboardView({
     fetchStats();
   }, [businessLine, selectedProcessId]);
 
+  // Si el proceso seleccionado ya no existe en el resumen, restablecer a "ALL"
+  useEffect(() => {
+    if (data?.processHealthSummary && selectedProcessId !== "ALL") {
+      const exists = data.processHealthSummary.some(
+        (p: any) => p.id === selectedProcessId || p.code === selectedProcessId
+      );
+      if (!exists) {
+        setSelectedProcessId("ALL");
+      }
+    }
+  }, [data?.processHealthSummary, selectedProcessId]);
+
+  // Escuchar eventos globales de eliminación de procesos para refrescar métricas
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      fetchStats();
+    };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
+  }, []);
+
   // Opciones para el selector de Procesos Bancarios
   const processOptions: CustomSelectOption[] = useMemo(() => {
     const list: CustomSelectOption[] = [

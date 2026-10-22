@@ -1194,12 +1194,20 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
       });
       const data = await res.json();
       if (data.success) {
+        const deletedId = selectedProcessId;
         setIsDeleteProcessModalOpen(false);
         setStatusBanner(data.message || "Proceso eliminado exitosamente.");
         setTimeout(() => setStatusBanner(null), 4500);
         setSelectedNode(null);
         setIsDrawerOpen(false);
         await refreshProcessList();
+
+        // Notificar globalmente a todas las vistas para sincronización inmediata
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("bx_process_deleted", { detail: { processId: deletedId } })
+          );
+        }
       } else {
         setStatusBanner("Error: " + (data.error || "Error al eliminar el proceso"));
         setTimeout(() => setStatusBanner(null), 4500);
@@ -2589,7 +2597,8 @@ Te formularé de 3 a 4 preguntas clave para estructurar el diagrama con compuert
                 </p>
                 <ul className="list-disc list-inside space-y-0.5 text-amber-800 pl-1">
                   <li>Se eliminarán todos los nodos y conectores del diagrama.</li>
-                  <li>Se desvincularán los controles asociados a los pasos del proceso.</li>
+                  <li>Se eliminarán en cascada todos sus eventos de riesgo, matrices 5×5, planes de acción y KRIs vinculados.</li>
+                  <li>Se actualizarán en tiempo real el Dashboard, Marco RAF, Matrices 5×5 y Simulador de Estrés.</li>
                   <li>Se registrará una traza inalterable con sello criptográfico <strong>SHA-256</strong> en la Bitácora de Auditoría (Audit Log CNBV).</li>
                 </ul>
               </div>

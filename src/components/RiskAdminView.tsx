@@ -60,15 +60,22 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch registered processes
-  useEffect(() => {
+  const loadProcesses = () => {
     fetch("/api/processes")
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.processes) {
           setProcesses(data.processes);
+          if (selectedProcessId !== "ALL" && !data.processes.some((p: any) => p.id === selectedProcessId)) {
+            setSelectedProcessId("ALL");
+          }
         }
       })
       .catch((err) => console.error("Error fetching processes in RiskAdminView:", err));
+  };
+
+  useEffect(() => {
+    loadProcesses();
   }, []);
 
   // Fetch risks based on filters
@@ -95,6 +102,16 @@ export function RiskAdminView({ businessLine, currentRole }: RiskAdminViewProps)
 
   useEffect(() => {
     fetchRisks();
+  }, [businessLine, selectedZone, selectedType, selectedProcessId, search]);
+
+  // Sincronización en tiempo real ante eliminación de procesos
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      loadProcesses();
+      fetchRisks();
+    };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
   }, [businessLine, selectedZone, selectedType, selectedProcessId, search]);
 
   // Extract unique taxonomies for the form

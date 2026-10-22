@@ -89,15 +89,22 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
 
   // Cargar Procesos
-  useEffect(() => {
+  const loadProcesses = () => {
     fetch("/api/processes")
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.processes) {
           setProcesses(data.processes);
+          if (selectedProcessId !== "ALL" && !data.processes.some((p: any) => p.id === selectedProcessId)) {
+            setSelectedProcessId("ALL");
+          }
         }
       })
       .catch((err) => console.error("Error fetching processes in ActionPlansView:", err));
+  };
+
+  useEffect(() => {
+    loadProcesses();
   }, []);
 
   // Cargar Planes
@@ -112,6 +119,17 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
       })
       .finally(() => setLoading(false));
   };
+
+  // Sincronización en tiempo real ante eliminación de procesos
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      loadProcesses();
+      fetchPlans();
+      fetchRisks();
+    };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
+  }, []);
 
   // Cargar Riesgos
   const fetchRisks = () => {

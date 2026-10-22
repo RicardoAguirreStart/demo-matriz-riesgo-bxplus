@@ -18,29 +18,8 @@ import {
 async function ensureInitialActionPlans() {
   try {
     const count = await prisma.actionPlan.count();
-    const existing = await prisma.actionPlan.findMany({
-      select: {
-        code: true,
-        riskEvent: {
-          select: {
-            process: {
-              select: { code: true },
-            },
-          },
-        },
-      },
-    });
-
-    const coveredProcessCodes = new Set(
-      existing.map((p) => p.riskEvent?.process?.code).filter(Boolean)
-    );
-
-    const needsSeeding =
-      count <= 4 ||
-      !coveredProcessCodes.has("PR-TI-01") ||
-      !coveredProcessCodes.has("PR-CRED-02");
-
-    if (!needsSeeding) return;
+    // Si ya existen planes en el sistema, respetar el estado actual y no regenerar planes
+    if (count > 0) return;
 
     // Obtener un usuario propietario por defecto (Head de Proceso / UAIR)
     const defaultOwner =
@@ -48,7 +27,7 @@ async function ensureInitialActionPlans() {
       (await prisma.user.findFirst());
     if (!defaultOwner) return;
 
-    // Buscar riesgos clave en los procesos
+    // Buscar riesgos clave en los procesos existentes en la base de datos
     const allRisks = await prisma.riskEvent.findMany({
       include: {
         process: true,
@@ -57,6 +36,9 @@ async function ensureInitialActionPlans() {
       },
     });
 
+    if (allRisks.length === 0) return;
+
+    const existing: any[] = [];
     const plansToCreate: any[] = [];
 
     // 1. Quick-Win para PR-TI-01 (RSK-CYBER-006 o RSK-CYBER-015)

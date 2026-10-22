@@ -28,25 +28,31 @@ export function FloatingSafetyWidget({
   const [statsData, setStatsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadAlerts() {
-      try {
-        const res = await fetch("/api/dashboard/stats");
-        const json = await res.json();
-        if (json.success && isMounted) {
-          setStatsData(json);
-        }
-      } catch (err) {
-        console.error("Error al cargar alertas en tiempo real:", err);
-      } finally {
-        if (isMounted) setLoading(false);
+  const loadAlerts = async () => {
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      const json = await res.json();
+      if (json.success) {
+        setStatsData(json);
       }
+    } catch (err) {
+      console.error("Error al cargar alertas en tiempo real:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadAlerts();
-    return () => {
-      isMounted = false;
+  }, []);
+
+  // Sincronización en tiempo real ante eliminación de procesos
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      loadAlerts();
     };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
   }, []);
 
   const kris = statsData?.liveAlerts?.kris || [];

@@ -35,19 +35,39 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
   );
   const [selectedCell, setSelectedCell] = useState<{ prob: number; imp: number } | null>(null);
 
-  // 1. Cargar catálogo de procesos registrados
-  useEffect(() => {
+  const loadProcesses = () => {
     fetch("/api/processes")
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.processes) {
           setProcesses(data.processes);
-          if (data.processes.length > 0 && !selectedProcessId) {
+          const exists = data.processes.some((p: any) => p.id === selectedProcessId);
+          if (!exists && data.processes.length > 0) {
             setSelectedProcessId(data.processes[0].id);
+          } else if (data.processes.length === 0) {
+            setSelectedProcessId("");
+            setActiveProcessDetail(null);
           }
         }
       })
       .catch((err) => console.error("Error fetching processes for heatmap:", err));
+  };
+
+  const loadRisks = () => {
+    setLoading(true);
+    fetch(`/api/risks?businessLine=${businessLine}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setRisks(data.risks || []);
+        }
+      })
+      .finally(() => setLoading(false));
+  };
+
+  // 1. Cargar catálogo de procesos registrados
+  useEffect(() => {
+    loadProcesses();
   }, []);
 
   // 2. Cargar detalle del proceso seleccionado para trazabilidad de nodos
@@ -68,15 +88,17 @@ export function HeatmapView({ businessLine }: HeatmapViewProps) {
 
   // 3. Cargar riesgos (todos los riesgos o filtrados)
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/risks?businessLine=${businessLine}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setRisks(data.risks || []);
-        }
-      })
-      .finally(() => setLoading(false));
+    loadRisks();
+  }, [businessLine]);
+
+  // 4. Sincronización en tiempo real ante eliminación de procesos
+  useEffect(() => {
+    const handleProcessDeleted = () => {
+      loadProcesses();
+      loadRisks();
+    };
+    window.addEventListener("bx_process_deleted", handleProcessDeleted);
+    return () => window.removeEventListener("bx_process_deleted", handleProcessDeleted);
   }, [businessLine]);
 
   // CNBV 5x5 Color Matrix helper

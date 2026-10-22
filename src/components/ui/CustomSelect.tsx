@@ -25,11 +25,30 @@ interface CustomSelectProps {
   dropdownClassName?: string;
 }
 
-function normalizeString(str: string): string {
+export function normalizeSearchString(str: string): string {
   return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+/**
+ * Realiza una búsqueda abierta multitérmino sin importar el orden ni la contigüidad.
+ * Ejemplo: "crédito digital" coincide con "Proceso de Solicitud y Dispersión de Crédito PyME Digital"
+ */
+export function matchesFuzzyMultiWord(targetText: string, searchQuery: string): boolean {
+  const trimmed = searchQuery.trim();
+  if (!trimmed) return true;
+
+  const normalizedTarget = normalizeSearchString(targetText);
+  const tokens = normalizeSearchString(trimmed)
+    .split(/[\s,;/|]+/)
+    .filter((t) => t.length > 0);
+
+  if (tokens.length === 0) return true;
+
+  // Cada palabra o token buscado debe estar presente en el texto objetivo
+  return tokens.every((token) => normalizedTarget.includes(token));
 }
 
 export function CustomSelect({
@@ -77,16 +96,12 @@ export function CustomSelect({
 
   const isDark = theme === "dark";
 
-  // Filtered options based on search query (matches label, description, badge, or value without accent sensitivity)
+  // Búsqueda abierta multitérmino (coincide en label, description, badge o value sin importar el orden de las palabras)
   const filteredOptions = useMemo(() => {
     if (!searchTerm.trim()) return options;
-    const query = normalizeString(searchTerm.trim());
     return options.filter((opt) => {
-      const matchLabel = normalizeString(opt.label).includes(query);
-      const matchDesc = opt.description ? normalizeString(opt.description).includes(query) : false;
-      const matchBadge = opt.badge ? normalizeString(opt.badge).includes(query) : false;
-      const matchValue = normalizeString(opt.value).includes(query);
-      return matchLabel || matchDesc || matchBadge || matchValue;
+      const fullTarget = `${opt.label} ${opt.description || ""} ${opt.badge || ""} ${opt.value}`;
+      return matchesFuzzyMultiWord(fullTarget, searchTerm);
     });
   }, [options, searchTerm]);
 

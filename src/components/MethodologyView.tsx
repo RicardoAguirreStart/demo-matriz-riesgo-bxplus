@@ -7,7 +7,7 @@ import {
   calculateOperationalRiskMetrics,
   evaluateControlEffectiveness,
 } from "@/lib/engines/operational-risk-engine";
-import { CustomSelect } from "@/components/ui/CustomSelect";
+import { CustomSelect, matchesFuzzyMultiWord } from "@/components/ui/CustomSelect";
 import {
   BookOpen,
   Shield,
@@ -325,21 +325,15 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
 
   const filteredCatalog = riskCatalog.filter((item) => {
     const matchesBlock = selectedBlock === "ALL" || item.block === selectedBlock;
-    const matchesSearch =
-      !conceptSearch ||
-      item.name.toLowerCase().includes(conceptSearch.toLowerCase()) ||
-      item.regulatoryBase.toLowerCase().includes(conceptSearch.toLowerCase()) ||
-      item.summary.toLowerCase().includes(conceptSearch.toLowerCase()) ||
-      item.exampleBx.toLowerCase().includes(conceptSearch.toLowerCase());
+    const fullText = `${item.name} ${item.regulatoryBase} ${item.summary} ${item.exampleBx}`;
+    const matchesSearch = matchesFuzzyMultiWord(fullText, conceptSearch);
     return matchesBlock && matchesSearch;
   });
 
-  const filteredGlossary = glossaryTerms.filter(
-    (g) =>
-      !conceptSearch ||
-      g.term.toLowerCase().includes(conceptSearch.toLowerCase()) ||
-      g.def.toLowerCase().includes(conceptSearch.toLowerCase())
-  );
+  const filteredGlossary = glossaryTerms.filter((g) => {
+    const fullText = `${g.term} ${g.def}`;
+    return matchesFuzzyMultiWord(fullText, conceptSearch);
+  });
 
   return (
     <div className="space-y-6 w-full">

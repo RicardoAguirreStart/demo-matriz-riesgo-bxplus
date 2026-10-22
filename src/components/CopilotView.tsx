@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { formatMXN, formatPct, getZoneBadgeClasses } from "@/lib/utils";
 import { RoleType } from "@/types";
-import { CustomSelect, CustomSelectOption } from "@/components/ui/CustomSelect";
+import { CustomSelect, CustomSelectOption, matchesFuzzyMultiWord } from "@/components/ui/CustomSelect";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import {
   Sparkles,
@@ -343,12 +343,8 @@ export function CopilotView({ currentRole }: CopilotViewProps) {
   const filteredRisks = useMemo(() => {
     if (!simResult?.stressedRisks) return [];
     return simResult.stressedRisks.filter((r: any) => {
-      const matchesSearch =
-        tableSearch === "" ||
-        r.code.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        r.title.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        r.processNodeLabel.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        r.processCode.toLowerCase().includes(tableSearch.toLowerCase());
+      const fullText = `${r.code || ""} ${r.title || ""} ${r.processNodeLabel || ""} ${r.processCode || ""}`;
+      const matchesSearch = matchesFuzzyMultiWord(fullText, tableSearch);
 
       if (!matchesSearch) return false;
 

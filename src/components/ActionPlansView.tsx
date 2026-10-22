@@ -34,7 +34,7 @@ import {
   BarChart3,
   Sliders,
 } from "lucide-react";
-import { CustomSelect } from "@/components/ui/CustomSelect";
+import { CustomSelect, matchesFuzzyMultiWord } from "@/components/ui/CustomSelect";
 
 interface ActionPlansViewProps {
   currentRole: RoleType;
@@ -454,17 +454,10 @@ export function ActionPlansView({ currentRole }: ActionPlansViewProps) {
     }
 
     if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.code?.toLowerCase().includes(q) ||
-          p.title?.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q) ||
-          p.riskEvent?.code?.toLowerCase().includes(q) ||
-          p.riskEvent?.title?.toLowerCase().includes(q) ||
-          p.riskEvent?.process?.name?.toLowerCase().includes(q) ||
-          p.riskEvent?.processNode?.label?.toLowerCase().includes(q)
-      );
+      list = list.filter((p) => {
+        const fullText = `${p.code || ""} ${p.title || ""} ${p.description || ""} ${p.riskEvent?.code || ""} ${p.riskEvent?.title || ""} ${p.riskEvent?.process?.name || ""} ${p.riskEvent?.processNode?.label || ""}`;
+        return matchesFuzzyMultiWord(fullText, searchTerm);
+      });
     }
 
     return list;

@@ -405,8 +405,8 @@ export function DashboardView({
                     </div>
 
                     {/* Vínculo Proceso Bancario */}
-                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500 font-mono">
-                      <Link2 className="w-3 h-3 text-[#3299A8] shrink-0" />
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded font-mono max-w-full">
+                      <span className="shrink-0 text-xs">🔗</span>
                       <span className="truncate">
                         {th.associatedProcessCode === "ALL"
                           ? "Transversal: Todos los Procesos"
@@ -756,12 +756,22 @@ export function DashboardView({
                               : "bg-rose-500"
                           }`}
                         />
-                        <span className="text-[10px] text-gray-600 truncate font-medium">
-                          Indicador Rector: <strong className="text-gray-900">{p.primaryKriMetric.code}</strong>
+                        <span className="text-[11px] text-gray-700 truncate font-medium">
+                          Indicador Rector: <strong className="text-gray-900 font-bold">{p.primaryKriMetric.code} {p.primaryKriMetric.value}</strong>
                         </span>
                       </div>
-                      <span className="font-mono text-xs font-bold text-gray-900 shrink-0">
-                        {p.primaryKriMetric.value}
+                      <span
+                        className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded uppercase ${
+                          p.primaryKriMetric.zone === "GREEN"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : p.primaryKriMetric.zone === "YELLOW"
+                            ? "bg-amber-100 text-amber-800"
+                            : p.primaryKriMetric.zone === "ORANGE"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-rose-100 text-rose-800"
+                        }`}
+                      >
+                        {p.primaryKriMetric.zone}
                       </span>
                     </div>
                   )}
@@ -774,10 +784,10 @@ export function DashboardView({
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono font-bold text-gray-900 text-xs">
-                          {p.processRafThreshold?.appetiteConsumptionPct || 0}%
+                          {p.processRafThreshold?.appetiteConsumptionPct || 0}% del Apetito
                         </span>
                         <span className="text-[9px] font-mono text-teal-800 bg-teal-50 border border-teal-200 px-1 py-0.2 rounded font-semibold">
-                          {p.peaSharePct}% PEA B×+
+                          {p.peaSharePct}% de la PEA Total B×+
                         </span>
                       </div>
                     </div>
@@ -798,11 +808,11 @@ export function DashboardView({
                     <div className="flex items-center justify-between text-[10px]">
                       <span className="text-gray-600 font-medium">Mitigación Art. 88 CUB:</span>
                       <span className="font-mono font-bold text-emerald-700">
-                        -{p.mitigationEffectivenessPct}%
+                        -{p.mitigationEffectivenessPct}% mitigación
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-gray-500 mt-0.5 font-mono">
-                      <span>Score: {p.avgInherentScore} → {p.avgResidualScore}</span>
+                      <span>Score: Inh {p.avgInherentScore} → Res {p.avgResidualScore}</span>
                       <span
                         className={
                           p.nfControlsCount > 0

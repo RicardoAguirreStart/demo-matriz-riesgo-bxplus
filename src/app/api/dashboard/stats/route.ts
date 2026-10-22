@@ -427,34 +427,14 @@ export async function GET(request: Request) {
       };
 
       if (p.code === "PR-AGRO-01") {
-        if (imoraTh) {
-          primaryKriMetric = {
-            code: imoraTh.metricCode,
-            name: "Índice de Morosidad Agro (IMORA)",
-            value: `${imoraTh.currentValue}%`,
-            unit: "%",
-            zone: imoraTh.currentZone as any,
-            type: "RAF",
-          };
-        } else if (agroKri) {
-          primaryKriMetric = {
-            code: agroKri.code,
-            name: "Sequía Cartera Agro",
-            value: `${agroKri.currentValue}%`,
-            unit: "%",
-            zone: agroKri.currentZone as any,
-            type: "KRI",
-          };
-        } else {
-          primaryKriMetric = {
-            code: cet1Th?.metricCode || "CET1",
-            name: "Solvencia Comercial CET1",
-            value: `${cet1Th?.currentValue || 10.42}%`,
-            unit: "%",
-            zone: (cet1Th?.currentZone as any) || "GREEN",
-            type: "RAF",
-          };
-        }
+        primaryKriMetric = {
+          code: "IMORA",
+          name: "Índice de Morosidad Agropecuaria (IMORA)",
+          value: imoraTh ? `${imoraTh.currentValue}%` : "2.35%",
+          unit: "%",
+          zone: (imoraTh?.currentZone as any) || "GREEN",
+          type: "RAF",
+        };
       } else if (p.code === "PR-TES-01") {
         primaryKriMetric = {
           code: "CCL",
@@ -475,9 +455,9 @@ export async function GET(request: Request) {
         };
       } else if (p.code === "PR-TI-01") {
         primaryKriMetric = {
-          code: "SPEI_AVAIL",
-          name: "Disponibilidad Enlace SPEI",
-          value: `${speiTh?.currentValue || 99.96}%`,
+          code: "SPEI",
+          name: "Disponibilidad del Canal SPEI",
+          value: `${speiTh?.currentValue || 99.82}%`,
           unit: "%",
           zone: (speiTh?.currentZone as any) || "GREEN",
           type: "RAF",

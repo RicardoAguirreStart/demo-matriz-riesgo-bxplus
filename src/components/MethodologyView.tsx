@@ -40,6 +40,7 @@ import {
   ShieldCheck,
   Box,
   Eye,
+  Calculator,
 } from "lucide-react";
 
 interface MethodologyViewProps {
@@ -53,6 +54,24 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
   const [selectedBlock, setSelectedBlock] = useState<"ALL" | "BLOCK_1" | "BLOCK_2" | "BLOCK_3">("ALL");
   const [conceptSearch, setConceptSearch] = useState("");
   const [riskCounts, setRiskCounts] = useState<Record<string, number>>({});
+
+  // Emerging Risk Cube 3D & Visibility Gap Live Calculator State
+  const [calcP, setCalcP] = useState(1);
+  const [calcI, setCalcI] = useState(4);
+  const [calcX, setCalcX] = useState(5);
+  const [calcY, setCalcY] = useState(4);
+  const [calcZ, setCalcZ] = useState(5);
+
+  const calcScore2D = calcP * calcI;
+  const calcV = calcX * calcY * calcZ;
+  const calcVolNormTerm = 0.45 * (calcV / 125.0);
+  const calcWeightedQuadNorm = (0.40 * calcX * calcX + 0.25 * calcY * calcY + 0.35 * calcZ * calcZ) / 25.0;
+  const calcQuadWeightedTerm = 0.55 * calcWeightedQuadNorm;
+  const calcConvexComb = calcVolNormTerm + calcQuadWeightedTerm;
+  const calcGamma = calcX >= 4 && calcZ >= 4 ? 1.15 : 1.0;
+  const calcT3D = Math.min(100.0, Math.round(calcConvexComb * 100.0 * calcGamma * 100) / 100);
+  const calcS_eq = Math.round((calcT3D / 4.0) * 100) / 100;
+  const calcDeltaVis = Math.round((calcS_eq - calcScore2D) * 100) / 100;
 
   // Sandbox Live Calculator State
   const [sandboxProb, setSandboxProb] = useState(3);
@@ -1073,32 +1092,38 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
       {/* ========================================================================= */}
       {/* SUB-SECCIÓN 3: CUBO 3D DE RIESGOS EMERGENTES (5x5x5) & MOTOR PYTHON */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* SUB-SECCIÓN 3: CUBO 3D DE RIESGOS EMERGENTES (5x5x5) & FORMALIZACIÓN MATEMÁTICA */}
+      {/* ========================================================================= */}
       {activeSubTab === "EMERGING_CUBE" && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
           {/* Banner de Presentación y Justificación Estratégica */}
           <div className="bg-gradient-to-r from-[#1F242B] via-[#2A313C] to-[#1F242B] rounded-bx p-5 text-white shadow-md border border-gray-700">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="space-y-2 max-w-3xl">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="bg-[#3299A8] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded tracking-wider">
                     Innovación Metodológica B×+
                   </span>
                   <span className="bg-white/10 text-gray-200 text-[10px] font-mono px-2 py-0.5 rounded">
-                    🐍 Motor Python 3D • 125 Vóxeles
+                    🐍 Motor Determinista Python 3D • 125 Vóxeles
                   </span>
                   <span className="bg-[#C0D725]/20 text-[#C0D725] text-[10px] font-bold px-2 py-0.5 rounded border border-[#C0D725]/30">
                     CNBV CUB Art. 88 & Basilea III
                   </span>
+                  <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-mono px-2 py-0.5 rounded border border-cyan-500/30">
+                    Rigor Matemático en ℝ³
+                  </span>
                 </div>
                 <h3 className="text-xl font-serif font-bold text-white tracking-tight">
-                  Matriz Cúbica Tridimensional (5×5×5): Gestión Paralela para Riesgos Emergentes y Sistémicos
+                  Marco Matemático Formal: Matriz Cúbica Tridimensional (5×5×5) y Gestión Paralela (2D vs. 3D)
                 </h3>
                 <p className="text-xs text-gray-300 leading-relaxed">
-                  Superación del sesgo frecuentista tradicional mediante la evaluación simultánea de 
-                  <strong className="text-white"> Impacto Sistémico / Contagio (Eje X)</strong>, 
+                  Superación cuantitativa del sesgo frecuentista tradicional mediante el modelado ortogonal de 
+                  <strong className="text-white"> Contagio Sistémico (Eje X)</strong>, 
                   <strong className="text-white"> Incertidumbre Epistémica (Eje Y)</strong> y 
-                  <strong className="text-white"> Velocidad de Materialización / Time-to-Impact (Eje Z)</strong>, 
-                  garantizando que amenazas relámpago o cisnes negros no queden ocultos en zonas verdes o amarillas de la matriz 2D.
+                  <strong className="text-white"> Velocidad de Materialización / Dynamic Onset (Eje Z)</strong>, 
+                  resolviendo matemáticamente el efecto de punto ciego mediante el cálculo determinista del Tensor de Tensión (T_3D) y la Brecha de Visibilidad (Δ_vis).
                 </p>
               </div>
 
@@ -1115,385 +1140,927 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
             </div>
           </div>
 
-          {/* Bloque 1: Justificación - Por qué un Cubo 3D vs. la Matriz 2D Tradicional */}
-          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <Scale className="w-5 h-5 text-[#3299A8]" />
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                1. Justificación Normativa y Estratégica: ¿Por qué un Cubo 3D en Paralelo?
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="bg-rose-50/60 border border-rose-200 rounded p-3.5 space-y-2">
-                <div className="flex items-center gap-2 text-rose-800 font-bold">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>Puntos Ciegos Críticos de la Matriz 2D Tradicional (P × I)</span>
-                </div>
-                <ul className="space-y-1.5 text-gray-700 list-disc list-inside">
-                  <li>
-                    <strong className="text-gray-900">Sesgo Frecuentista de Baja Probabilidad:</strong> Amenazas sin precedentes históricos recientes (ej. ataque de ransomware con IA o corrida digital de liquidez) se catalogan como <em>P = 1 o 2</em>, clasificándose erróneamente en zona Verde o Amarilla.
-                  </li>
-                  <li>
-                    <strong className="text-gray-900">Invisibilidad del Tiempo de Reacción (Time-to-Impact):</strong> Trata con la misma severidad un evento que tarda 6 meses en materializarse que uno que colapsa operaciones en 15 minutos, donde los comités ordinarios no alcanzan a sesionar.
-                  </li>
-                  <li>
-                    <strong className="text-gray-900">Ignorancia del Contagio Sistémico:</strong> No mide el efecto dominó que una falla en un conector crítico (ej. SPEI) genera sobre la solvencia (ICAP) o la reputación institucional.
-                  </li>
-                </ul>
-              </div>
-
-              <div className="bg-emerald-50/60 border border-emerald-200 rounded p-3.5 space-y-2">
-                <div className="flex items-center gap-2 text-emerald-800 font-bold">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                  <span>Solución Institucional B×+: Modelo de Gestión Paralela</span>
-                </div>
-                <ul className="space-y-1.5 text-gray-700 list-disc list-inside">
-                  <li>
-                    <strong className="text-gray-900">Matriz Operativa 2D (5×5 CNBV):</strong> Gobierna el riesgo operativo recurrente y predecible bajo el marco de pérdida esperada (PEA) y máxima (PMA).
-                  </li>
-                  <li>
-                    <strong className="text-gray-900">Cubo Tridimensional 3D (5×5×5):</strong> Monitorea en paralelo la no-linealidad, el contagio sistémico y la velocidad relámpago con un motor determinista en Python.
-                  </li>
-                  <li>
-                    <strong className="text-gray-900">Alerta de Puntos Ciegos (2D → 3D):</strong> Identifica automáticamente cuando un riesgo subestimado en 2D exige activación de protocolos y planes de acción preventivos de 3LD.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Bloque 2: Los Tres Ejes del Cubo 3D y sus Escalas Normativas 1 a 5 */}
-          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <Layers className="w-5 h-5 text-[#C0D725]" />
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                2. Los Tres Ejes Ortogonales del Cubo (X, Y, Z ∈ 1..5)
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Eje X */}
-              <div className="border border-blue-200 rounded p-3.5 bg-blue-50/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
-                    Eje X • Impacto Sistémico
-                  </span>
-                  <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
-                    Contagio (1..5)
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-600 leading-snug">
-                  Mide la severidad financiera/reputacional y el <strong>efecto dominó</strong> hacia otros procesos bancarios, líneas de negocio o el sistema financiero nacional.
-                </p>
-                <div className="space-y-1 pt-1 text-[11px]">
-                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">1. Aislado / Local:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">&lt; 0.25% Cap. Neto</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">2. Acotado a Proceso:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">0.25% – 0.75% Cap.</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">3. Inter-Procesos:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">0.75% – 2.0% Cap.</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">4. Transversal B×+:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">2.0% – 5.0% Cap.</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
-                    <span className="font-bold text-rose-700">5. Sistémico / BCP:</span>
-                    <span className="text-rose-600 font-mono font-bold text-[10px]">&gt; 5.0% Cap. Neto</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Eje Y */}
-              <div className="border border-purple-200 rounded p-3.5 bg-purple-50/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-purple-900 tracking-wider">
-                    Eje Y • Incertidumbre
-                  </span>
-                  <span className="bg-purple-100 text-purple-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
-                    Epistémica (1..5)
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-600 leading-snug">
-                  Reemplaza la probabilidad clásica. Evalúa el <strong>grado de desconocimiento, falta de datos históricos y dinamismo no lineal</strong> del vector de amenaza.
-                </p>
-                <div className="space-y-1 pt-1 text-[11px]">
-                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">1. Conocido / Predecible:</span>
-                    <span className="text-gray-500 text-[10px]">Series robustas</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">2. Incertidumbre Baja:</span>
-                    <span className="text-gray-500 text-[10px]">Documentado sector</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">3. Moderada:</span>
-                    <span className="text-gray-500 text-[10px]">Datos preliminares</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">4. Alta Ambigüedad:</span>
-                    <span className="text-gray-500 text-[10px]">Sin precedentes B×+</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
-                    <span className="font-bold text-rose-700">5. Cisne Negro:</span>
-                    <span className="text-rose-600 font-bold text-[10px]">Ignorancia radical</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Eje Z */}
-              <div className="border border-amber-200 rounded p-3.5 bg-amber-50/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
-                    Eje Z • Velocidad
-                  </span>
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
-                    Time-to-Impact (1..5)
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-600 leading-snug">
-                  Mide la <strong>ventana de materialización (Onset Speed)</strong> y determina si el banco puede responder mediante comités o exige controles en tiempo real.
-                </p>
-                <div className="space-y-1 pt-1 text-[11px]">
-                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">1. Muy Lenta:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">&gt; 6 meses</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">2. Gradual:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">1 a 6 meses</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
-                    <span className="font-bold text-gray-800">3. Rápida:</span>
-                    <span className="text-gray-500 font-mono text-[10px]">1 a 4 semanas</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
-                    <span className="font-bold text-amber-800">4. Aguda:</span>
-                    <span className="text-amber-700 font-mono text-[10px]">4 a 72 horas</span>
-                  </div>
-                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
-                    <span className="font-bold text-rose-700">5. Instantánea:</span>
-                    <span className="text-rose-600 font-mono font-bold text-[10px]">&lt; 4 horas (Kill-Switch)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bloque 3: Las 8 Familias de Riesgos Emergentes en Banco B×+ */}
+          {/* ========================================================================= */}
+          {/* SECCIÓN 1: ESPACIO DE ESTADOS RETICULAR & VOLUMEN CÚBICO BRUTO */}
+          {/* ========================================================================= */}
           <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-indigo-600" />
+                <Layers className="w-5 h-5 text-[#3299A8]" />
                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  3. Taxonomía de las 8 Familias de Riesgos Emergentes en B×+
+                  Sección 1 — Espacio de Estados Reticular en ℝ³ y Métrica Volumétrica Discreta (V)
                 </h4>
               </div>
-              <span className="text-xs text-gray-500">Alineación WEF & CNBV Art. 88</span>
+              <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                |S| = 125 Vóxeles Ortogonales
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">1. Concentración Nube</span>
-                  <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">PR-TI-01</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Dependencia crítica de hiper-escaladores cloud o APIs de core sin sustituto ágil ni conmutación multiregión.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">2. Ciberataques IA</span>
-                  <span className="text-[10px] font-mono bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">PR-TI / PR-TES</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Ransomware destructivo, exploits zero-day y ataques coordinados automatizados sobre infraestructura transaccional.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">3. Fraude Sintético</span>
-                  <span className="text-[10px] font-mono bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">PR-CRED-02</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Deepfakes biométricos, identidades sintéticas generadas por IA y bypass de KYC en originación digital.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">4. Contagio Sistémico</span>
-                  <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">PR-TES-01</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Efecto dominó inter-procesos donde la falla en un nodo colateral impacta solvencia (ICAP) o liquidez (CCL).
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">5. Terceros / 4th Parties</span>
-                  <span className="text-[10px] font-mono bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">PR-CRED-02</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Brechas o discontinuidad en subcontratistas tecnológicos, despachos de valuación, notarías o corresponsales.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">6. Climático ESG</span>
-                  <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">PR-AGRO-01</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Choques físicos severos (sequías, estrés hídrico CONAGUA) que deterioran carteras agropecuarias simultáneamente.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">7. Liquidez Digital</span>
-                  <span className="text-[10px] font-mono bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded">PR-TES-01</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Corridas de depósitos 24/7 impulsadas por viralización en redes sociales y transferencias electrónicas masivas.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">8. Modelos e IA Drift</span>
-                  <span className="text-[10px] font-mono bg-violet-100 text-violet-800 px-1.5 py-0.5 rounded">Transversal</span>
-                </div>
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  Deriva de modelos de score crediticio, sesgo algorítmico o alucinaciones en motores de decisión autónoma.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bloque 4: Formulación Cuantitativa del Motor Python y Mitigación Vectorial */}
-          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <Binary className="w-5 h-5 text-amber-500" />
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                4. Motor Cuantitativo Python (scripts/emerging_risk_cube_engine.py) & Mitigación Vectorial
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="bg-[#1F242B] text-gray-100 rounded p-4 font-mono space-y-2 border border-gray-800">
-                <div className="text-[#C0D725] font-bold text-[11px] flex items-center justify-between">
-                  <span># FÓRMULAS DEL MOTOR EN PYTHON</span>
-                  <span>v3.5 CUB Art. 88</span>
-                </div>
-                <div className="space-y-1 text-[11px] text-gray-300">
-                  <p><span className="text-sky-400"># 1. Volumen Cúbico (1..125)</span></p>
-                  <p>V_inh = X_inh * Y_inh * Z_inh</p>
-                  <p>V_res = X_res * Y_res * Z_res</p>
-                  <p className="pt-1"><span className="text-sky-400"># 2. Factor de Sinergia Crítica</span></p>
-                  <p>gamma = 1.15 if (X_res &gt;= 4 and Z_res &gt;= 4) else 1.0</p>
-                  <p className="pt-1"><span className="text-sky-400"># 3. Tensor de Tensión 3D (1..100)</span></p>
-                  <p>T_3D = min(100.0, (0.45 * (V_res / 125.0) + 0.55 * (0.40*X^2 + 0.25*Y^2 + 0.35*Z^2) / 25.0) * 100 * gamma)</p>
-                  <p className="pt-1"><span className="text-sky-400"># 4. Score Homologado /25</span></p>
-                  <p>S_eq25 = round(T_3D / 4.0, 1)</p>
-                </div>
-              </div>
-
-              <div className="space-y-2.5 text-xs text-gray-700">
-                <div className="p-2.5 rounded border border-gray-200 bg-gray-50/50">
-                  <strong className="text-gray-900 block mb-1">
-                    Mitigación Vectorial Diferenciada por Eje (ΔX, ΔY, ΔZ):
-                  </strong>
-                  <ul className="space-y-1 list-disc list-inside text-[11px]">
-                    <li><strong>Eje X (Contagio):</strong> Mitigado por aislamiento de arquitectura, redundancia BCP y contención de colaterales (hasta -45%).</li>
-                    <li><strong>Eje Y (Incertidumbre):</strong> Mitigado por sensores KRI, threat intelligence externa y calibración predictiva (hasta -40%).</li>
-                    <li>
-                      <strong className="text-rose-700">Regla de Velocidad Z ≥ 4:</strong> <em>Únicamente</em> controles clasificados como <code>AUTOMATED</code> y <code>ONLINE_REALTIME</code> tienen capacidad de frenar el eje Z (hasta -45%). Los controles manuales o mensuales se topan al 10%.
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="p-2.5 rounded border border-amber-200 bg-amber-50/40 text-[11px]">
-                  <strong className="text-amber-900 block mb-1">
-                    Tope Art. 88 CUB para Controles No Formalizados (NF):
-                  </strong>
-                  Si un control no cuenta con formalización normativa institucional o evidencia válida comprobada (<code>isFormalized === false</code> o <code>hasValidEvidence === false</code>), su efectividad se topa automáticamente a un <strong>máximo del 20% (0.20)</strong>.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bloque 5: Las 4 Zonas de Severidad y Matriz de Puntos Ciegos */}
-          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <Eye className="w-5 h-5 text-rose-600" />
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                5. Zonificación del Cubo 3D (125 Vóxeles) & Matriz de Puntos Ciegos (2D vs. 3D)
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded border border-rose-200 bg-rose-50/40 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-rose-800">Zona Roja (Crítico)</span>
-                  <span className="bg-rose-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">V ≥ 64</span>
-                </div>
-                <p className="text-[11px] text-gray-600">
-                  Volumen ≥ 64 o (X ≥ 4 y Z ≥ 4) o T_3D ≥ 68. Exige protocolo de contingencia inmediata y reporte al CAIR.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-amber-200 bg-amber-50/40 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-800">Zona Naranja (Alerta)</span>
-                  <span className="bg-amber-500 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">36 ≤ V &lt; 64</span>
-                </div>
-                <p className="text-[11px] text-gray-600">
-                  Volumen entre 36 y 63 o X=5 o Z=5. Excede tolerancia institucional; requiere plan de acción Quick-Win 3LD.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-yellow-200 bg-yellow-50/40 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-yellow-800">Zona Amarilla (Vigilancia)</span>
-                  <span className="bg-yellow-500 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">15 ≤ V &lt; 36</span>
-                </div>
-                <p className="text-[11px] text-gray-600">
-                  En incubación o con velocidad moderada. Monitoreo regular mediante indicadores KRI asociados.
-                </p>
-              </div>
-
-              <div className="p-3 rounded border border-emerald-200 bg-emerald-50/40 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-800">Zona Verde (Controlado)</span>
-                  <span className="bg-emerald-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">V &lt; 15</span>
-                </div>
-                <p className="text-[11px] text-gray-600">
-                  Volumen &lt; 15 y T_3D &lt; 22. Dentro del apetito de riesgo emergente bajo control operativo ordinario.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-indigo-50/50 border border-indigo-200 rounded text-xs space-y-1 text-gray-700">
-              <strong className="text-indigo-900 block font-bold">
-                Diagnóstico de Gestión Paralela: &quot;Efecto Punto Ciego 2D vs. 3D&quot; (isBlindSpot2Dto3D)
-              </strong>
-              <p className="text-[11px] leading-relaxed">
-                El sistema detecta y etiqueta con una bandera institucional los riesgos clasificados en 
-                <strong className="text-emerald-700"> Verde</strong> o <strong className="text-yellow-700"> Amarillo</strong> en la matriz 2D que el Cubo 3D revela en 
-                <strong className="text-amber-700"> Naranja</strong> o <strong className="text-rose-700"> Rojo</strong>. 
-                Esto permite a la Dirección General y al Comité de Riesgos priorizar planes de mitigación en amenazas que antes eran estadísticamente invisibles.
+            <div className="text-xs text-gray-700 leading-relaxed space-y-3">
+              <p>
+                El universo de amenazas emergentes y sistémicas en Banco B×+ se formaliza como un retículo discreto acotado en el espacio euclidiano tridimensional ℝ³:
               </p>
+
+              <div className="bg-[#1F242B] text-gray-100 p-3.5 rounded font-mono text-xs border border-gray-800 flex items-center justify-between">
+                <span className="text-[#C0D725] font-bold">
+                  {"S = { (X, Y, Z) ∈ ℕ³ | 1 ≤ X, Y, Z ≤ 5 }"}
+                </span>
+                <span className="text-gray-400 text-[10px]">
+                  dim(S) = 3 • Cardinalidad: 5 × 5 × 5 = 125
+                </span>
+              </div>
+
+              {/* Definición de los 3 Ejes */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-1">
+                {/* Eje X */}
+                <div className="border border-blue-200 rounded p-3.5 bg-blue-50/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
+                      Eje X • Contagio Sistémico
+                    </span>
+                    <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                      X ∈ [1, 5]
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-snug">
+                    Cuantifica el radio de dispersión de daño interbancario, correlación de caída con otras líneas de negocio o entidades externas y consumo potencial del Capital Neto Regulatorio.
+                  </p>
+                  <div className="space-y-1 pt-1 text-[10px] font-mono">
+                    <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">1. Aislado / Local:</span>
+                      <span className="text-gray-500">&lt; 0.25% Cap. Neto</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">2. Acotado a Proceso:</span>
+                      <span className="text-gray-500">0.25% – 0.75% Cap.</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">3. Inter-Procesos:</span>
+                      <span className="text-gray-500">0.75% – 2.0% Cap.</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">4. Transversal B×+:</span>
+                      <span className="text-gray-500">2.0% – 5.0% Cap.</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                      <span className="font-bold text-rose-700">5. Sistémico / BCP:</span>
+                      <span className="text-rose-600 font-bold">&gt; 5.0% Cap. Neto</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Eje Y */}
+                <div className="border border-purple-200 rounded p-3.5 bg-purple-50/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-purple-900 tracking-wider">
+                      Eje Y • Incertidumbre Epistémica
+                    </span>
+                    <span className="bg-purple-100 text-purple-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                      Y ∈ [1, 5]
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-snug">
+                    Reemplaza la probabilidad frecuentista tradicional. Mide la carencia de series empíricas previas, falta de modelos predictivos calibrados y ambigüedad causa-efecto (*Deep Uncertainty*).
+                  </p>
+                  <div className="space-y-1 pt-1 text-[10px] font-mono">
+                    <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">1. Conocido / Predecible:</span>
+                      <span className="text-gray-500">Series temporales robustas</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">2. Incertidumbre Baja:</span>
+                      <span className="text-gray-500">Documentado en sector</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">3. Moderada:</span>
+                      <span className="text-gray-500">Proxies preliminares</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">4. Alta Ambigüedad:</span>
+                      <span className="text-gray-500">Sin precedentes en B×+</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                      <span className="font-bold text-rose-700">5. Cisne Negro:</span>
+                      <span className="text-rose-600 font-bold">Ignorancia radical</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Eje Z */}
+                <div className="border border-amber-200 rounded p-3.5 bg-amber-50/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
+                      Eje Z • Velocidad (Onset Speed)
+                    </span>
+                    <span className="bg-amber-100 text-amber-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                      Z ∈ [1, 5]
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-snug">
+                    Evalúa la dinámica temporal intrínseca d(Impacto)/dt y el tiempo transcurrido desde el primer síntoma detectable hasta el impacto total en balance (*Lead Time* de respuesta).
+                  </p>
+                  <div className="space-y-1 pt-1 text-[10px] font-mono">
+                    <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">1. Muy Lenta:</span>
+                      <span className="text-gray-500">&gt; 6 meses (Comités)</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">2. Gradual:</span>
+                      <span className="text-gray-500">1 a 6 meses (Táctico)</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">3. Rápida:</span>
+                      <span className="text-gray-500">1 a 4 sem. (Extraord.)</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                      <span className="font-bold text-amber-800">4. Aguda:</span>
+                      <span className="text-amber-700 font-bold">4 a 72 horas (Crisis)</span>
+                    </div>
+                    <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                      <span className="font-bold text-rose-700">5. Instantánea:</span>
+                      <span className="text-rose-600 font-bold">&lt; 4 horas (Kill-Switch)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Métrica de Volumen y Limitación Hiperbólica */}
+              <div className="p-4 rounded border border-gray-200 bg-gray-50/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">
+                    Forma Multilineal Simétrica y Limitación de las Superficies de Nivel Hiperbólicas
+                  </span>
+                  <span className="text-[10px] font-mono text-[#3299A8] font-bold">
+                    V = X · Y · Z ∈ [1, 125]
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  El volumen cúbico V(X, Y, Z) = X · Y · Z es una forma multilineal simétrica donde V(λX, Y, Z) = λV(X, Y, Z) y V es invariante bajo cualquier permutación de ejes. Sin embargo, las superficies de nivel V(X, Y, Z) = C son hiperboloides asintóticos a los planos coordenados. Esta propiedad matemática intrínseca genera un grave defecto de subestimación cuando dos ejes alcanzan niveles catastróficos pero el tercero es mínimo.
+                </p>
+
+                {/* Contraejemplo Demostrativo */}
+                <div className="p-3 rounded bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Demostración del Contraejemplo Formal (Por qué el Volumen no es suficiente):</span>
+                  </div>
+                  <p>
+                    Supóngase un riesgo con <strong>Contagio Sistémico Máximo (X = 5)</strong>, <strong>Velocidad Instantánea (Z = 5)</strong> y <strong>Baja Incertidumbre (Y = 1, amenaza conocida)</strong>:
+                  </p>
+                  <p className="font-mono font-bold text-amber-950">
+                    V = 5 × 1 × 5 = 25 &nbsp;⟹&nbsp; 25 / 125 = 20.0% (Calificado falsamente como riesgo moderado/verde en volumen puro)
+                  </p>
+                  <p className="text-gray-700">
+                    Un colapso sistémico instantáneo obtendría apenas el 20% de volumen. Por esta razón matemática, el sistema B×+ <strong>no evalúa únicamente el volumen</strong>, sino que construye el <strong>Tensor Compuesto de Tensión Tridimensional (T_3D)</strong> mediante combinación convexa y norma cuadrática.
+                  </p>
+                </div>
+              </div>
+
+              {/* 8 Familias de Riesgos Emergentes B×+ */}
+              <div className="pt-2">
+                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Taxonomía Oficial: 8 Familias de Riesgos Emergentes en Banco B×+</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">1. Concentración Nube</strong>
+                    <span className="text-[10px] text-gray-500">Dependencia de hiper-escaladores</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">2. Ciberataques IA</strong>
+                    <span className="text-[10px] text-gray-500">Ransomware destructivo y zero-day</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">3. Fraude Sintético</strong>
+                    <span className="text-[10px] text-gray-500">Deepfakes biométricos y bypass KYC</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">4. Contagio Sistémico</strong>
+                    <span className="text-[10px] text-gray-500">Efecto dominó hacia solvencia/ICAP</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">5. Terceros / 4th Parties</strong>
+                    <span className="text-[10px] text-gray-500">Vulnerabilidades en proveedores</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">6. Climático ESG</strong>
+                    <span className="text-[10px] text-gray-500">Estrés hídrico en cartera agro</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">7. Liquidez Digital</strong>
+                    <span className="text-[10px] text-gray-500">Corridas 24/7 vía redes y SPEI</span>
+                  </div>
+                  <div className="p-2 rounded bg-white border border-gray-200">
+                    <strong className="text-gray-900 block">8. Modelos e IA Drift</strong>
+                    <span className="text-[10px] text-gray-500">Alucinación y sesgo algorítmico</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* SECCIÓN 2: TENSOR DE TENSIÓN TRIDIMENSIONAL COMPUESTO (T_3D) */}
+          {/* ========================================================================= */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Binary className="w-5 h-5 text-[#C0D725]" />
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  Sección 2 — Tensor de Tensión Tridimensional Compuesto (T_3D) y Homologación (S_eq)
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono text-[#3299A8] font-bold">
+                T_3D ∈ [0, 100] • S_eq ∈ [1, 25]
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-700 leading-relaxed space-y-3">
+              <p>
+                Para resolver las limitaciones de las superficies hiperbólicas y penalizar de forma convexa los desbalances extremos, se formula el <strong>Índice Compuesto de Tensión Tridimensional (T_3D)</strong> como una combinación convexa de densidad volumétrica y norma euclidiana cuadrática ponderada, modulada por un factor de sinergia no lineal:
+              </p>
+
+              {/* Ecuación Maestra */}
+              <div className="bg-[#1F242B] text-gray-100 p-4 rounded-bx font-mono text-xs border border-gray-800 space-y-2">
+                <div className="text-[#C0D725] font-bold text-sm">
+                  {"T_3D = min( 100.0, [ 0.45 · (V / 125) + 0.55 · ( ‖R⃗‖_W² / 25 ) ] · 100 · γ(X, Z) )"}
+                </div>
+                <div className="text-gray-300 text-[11px]">
+                  {"donde ‖R⃗‖_W² = w_x·X² + w_y·Y² + w_z·Z²  con  w_x = 0.40, w_y = 0.25, w_z = 0.35"}
+                </div>
+              </div>
+
+              {/* Los 4 Componentes Analíticos */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {/* Componente A */}
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">
+                      Componente A: Métrica Volumétrica Normalizada
+                    </span>
+                    <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">
+                      0.45 × (V / 125)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Aporta el <strong>45% del peso base</strong>. Cuantifica el acoplamiento global y simultáneo de las tres dimensiones. Si las tres variables son altas, el término volumétrico escala exponencialmente hacia 0.45.
+                  </p>
+                </div>
+
+                {/* Componente B */}
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">
+                      Componente B: Norma Cuadrática Ponderada
+                    </span>
+                    <span className="text-[10px] font-mono bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">
+                      0.55 × (‖R⃗‖_W² / 25)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Aporta el <strong>55% del peso base</strong>. Pondera baricéntricamente los cuadrados de cada coordenada: w_x = 0.40 (Contagio), w_z = 0.35 (Velocidad) y w_y = 0.25 (Incertidumbre), con ∑ w_i = 1.0.
+                  </p>
+                </div>
+
+                {/* Componente C */}
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">
+                      Componente C: Factor de Sinergia Crítica OODA (γ)
+                    </span>
+                    <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                      {"γ(X, Z) ∈ {1.00, 1.15}"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Modela la amplificación no lineal destructiva del <strong>+15%</strong> cuando X ≥ 4 ∧ Z ≥ 4. Ocurre cuando la velocidad del ataque o choque relámpago supera la capacidad de respuesta del <strong>ciclo OODA (*Observe, Orient, Decide, Act*)</strong> institucional.
+                  </p>
+                </div>
+
+                {/* Componente D */}
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">
+                      Componente D: Operador de Proyección y Homologación (S_eq)
+                    </span>
+                    <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
+                      S_eq = round(T_3D / 4.0, 2)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    El operador de saturación min(100, ·) acota el tensor en [0, 100]. La proyección afín S_eq ≈ T_3D / 4.0 homologa el valor en la escala regulatoria de la matriz CNBV [1, 25] para el cálculo exacto de la Brecha de Visibilidad.
+                  </p>
+                </div>
+              </div>
+
+              {/* Tres Recuadros Explicativos Fundamentales */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className="p-3 rounded border border-indigo-200 bg-indigo-50/40 text-[11px] space-y-1">
+                  <strong className="text-indigo-900 block font-bold">
+                    ¿Por qué términos al cuadrado (X², Y², Z²)?
+                  </strong>
+                  <p className="text-gray-700 leading-snug">
+                    La norma cuadrática euclidiana actúa como una función de energía potencial. La penalización cuadrática evita que un nivel 5 se diluya: si X=5, su contribución es 5² = 25, aportando 10 puntos completos al numerador y dominando el tensor frente a ejes con valor 1.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded border border-indigo-200 bg-indigo-50/40 text-[11px] space-y-1">
+                  <strong className="text-indigo-900 block font-bold">
+                    Justificación de los Pesos (wx &gt; wz &gt; wy):
+                  </strong>
+                  <p className="text-gray-700 leading-snug">
+                    En instituciones de crédito bajo Basilea III, el colapso procede del contagio sistémico (w_x = 0.40) y de la incapacidad de ejecutar medidas de resolución ante corridas relámpago (w_z = 0.35). La incertidumbre (w_y = 0.25) amplifica la varianza pero no genera insolvencia inmediata por sí sola.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded border border-indigo-200 bg-indigo-50/40 text-[11px] space-y-1">
+                  <strong className="text-indigo-900 block font-bold">
+                    Normalización Exacta sobre 25:
+                  </strong>
+                  <p className="text-gray-700 leading-snug">
+                    En el vértice extremal (5, 5, 5), ‖R⃗‖_W² = 0.40(25) + 0.25(25) + 0.35(25) = 25.0. Al dividir entre 25, la norma queda rigurosamente acotada en el intervalo cerrado [0.04, 1.00], asegurando convexidad matemática perfecta.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* SECCIÓN 3: ÁLGEBRA VECTORIAL DE MITIGACIÓN Y ART. 88 CUB */}
+          {/* ========================================================================= */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  Sección 3 — Álgebra Vectorial de Mitigación y Reglas Regulatorias (CNBV Art. 88 CUB)
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Operador de Traslación Vectorial
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-700 leading-relaxed space-y-3">
+              <p>
+                A diferencia de los modelos 2D que aplican un porcentaje genérico y difuso sobre el impacto, el sistema de Banco B×+ modela la mitigación como una <strong>traslación vectorial en el espacio de estados</strong> mediante un operador de proyección:
+              </p>
+
+              {/* Formulación Vectorial */}
+              <div className="bg-[#1F242B] text-gray-100 p-4 rounded-bx font-mono text-xs border border-gray-800 space-y-2">
+                <div className="text-[#C0D725] font-bold">
+                  {"R⃗_res = max( [ 1.0, 1.0, 1.0 ]ᵀ, R⃗_inh - ΔR⃗_efectivo )"}
+                </div>
+                <div className="text-gray-300 text-[11px]">
+                  {"donde R⃗_inh = [ X_inh, Y_inh, Z_inh ]ᵀ  y  ΔR⃗_efectivo = [ ΔX, ΔY, ΔZ ]ᵀ  con Δu_j ∈ [0.0, 2.5]"}
+                </div>
+              </div>
+
+              {/* Desacoplamiento de Ejes por Tipología de Control */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <strong className="text-blue-900 font-bold block">
+                    ΔX: Desacoplamiento de Contagio (Eje X)
+                  </strong>
+                  <p className="text-[11px] text-gray-600">
+                    Mitigado exclusivamente por controles de arquitectura resiliente: <em>segmentación de red, arquitectura BCP multiregión, aislamiento de colaterales y desconexión programada de APIs</em>.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <strong className="text-purple-900 font-bold block">
+                    ΔY: Desacoplamiento de Incertidumbre (Eje Y)
+                  </strong>
+                  <p className="text-[11px] text-gray-600">
+                    Mitigado por <em>sensores KRI de telemetría continua, Threat Intelligence feeds externos, pruebas de estrés bayesianas y modelos predictivos de dispersión de pérdida</em>.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <strong className="text-amber-900 font-bold block">
+                    ΔZ: Desacoplamiento de Velocidad (Eje Z)
+                  </strong>
+                  <p className="text-[11px] text-gray-600">
+                    Mitigado únicamente por <em>mecanismos autónomos en tiempo real: playbooks SOAR automáticos, kill-switches algorítmicos y reglas preventivas en pasarela de pagos</em>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reglas Normativas Cruciales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Condición de Falla en Velocidad */}
+                <div className="p-3.5 rounded border border-rose-200 bg-rose-50/50 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-rose-800 font-bold text-xs">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Condición de Falla en Velocidad (Z ≥ 4 sin Controles en Línea):</span>
+                  </div>
+                  <p className="text-[11px] text-gray-700 leading-relaxed">
+                    Si un riesgo tiene velocidad crítica (Z_inh ≥ 4, materialización en menos de 72 horas) y sus controles son manuales, comités periódicos o firmas diferidas (<code>executionTiming !== "ONLINE_REALTIME"</code> o <code>automation !== "AUTOMATED"</code>), formalmente:
+                  </p>
+                  <p className="font-mono font-bold text-rose-900 text-xs bg-white p-2 rounded border border-rose-200">
+                    {"ΔZ = 0.0  (Inoperancia Matemática de Controles Humanos ante Choques Relámpago)"}
+                  </p>
+                </div>
+
+                {/* Truncamiento Art. 88 CUB */}
+                <div className="p-3.5 rounded border border-amber-200 bg-amber-50/50 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-amber-800 font-bold text-xs">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Truncamiento por Control No Formalizado (Art. 88 CUB):</span>
+                  </div>
+                  <p className="text-[11px] text-gray-700 leading-relaxed">
+                    Conforme a la CUB de la CNBV, si un control carece de manual formalizado o evidencia documental válida auditada por 2LD (<code>!isFormalized || !hasValidEvidence</code>), su capacidad de absorción nominal se degrada al 20%:
+                  </p>
+                  <p className="font-mono font-bold text-amber-900 text-xs bg-white p-2 rounded border border-amber-200">
+                    {"Δu_j,efectivo = min( Δu_j,nominal, 2.0 × 0.20 ) = min( Δu_j,nominal, 0.40 )"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* SECCIÓN 4: ZONIFICACIÓN TOPOLÓGICA DEL CUBO (125 VÓXELES) */}
+          {/* ========================================================================= */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-rose-600" />
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  Sección 4 — Zonificación Topológica y Partición del Espacio de 125 Vóxeles
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                4 Regiones Conexas • Cota Cúbica V = 64
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-700 leading-relaxed space-y-3">
+              <p>
+                El espacio S se particiona en cuatro subconjuntos conexos disjuntos gobernados por condiciones booleanas rigurosas, garantizando que amenazas con extrema criticidad en cualquiera de sus ejes no sean clasificadas en zonas verdes o amarillas:
+              </p>
+
+              {/* Tabla de Zonificación Topológica */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse border border-gray-200 text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                      <th className="p-2.5 border border-gray-200">Zona Topológica</th>
+                      <th className="p-2.5 border border-gray-200">Condición Booleana Exacta</th>
+                      <th className="p-2.5 border border-gray-200">Rango Tensor T_3D</th>
+                      <th className="p-2.5 border border-gray-200">Mandato de Gobernanza (CUB Art. 88)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    <tr className="bg-rose-50/70">
+                      <td className="p-2.5 border border-gray-200 font-bold text-rose-800">
+                        🔴 Crítica Sistémica (RED)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-[11px] text-rose-950 font-bold">
+                        {"V ≥ 64 ∨ (X ≥ 4 ∧ Z ≥ 4) ∨ T_3D ≥ 68.0"}
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-rose-900">
+                        T_3D ≥ 68.0 (S_eq ≥ 17.0)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 text-gray-800">
+                        Activación inmediata de BCP, escalamiento urgente al CAIR y sesión extraordinaria de Consejo.
+                      </td>
+                    </tr>
+                    <tr className="bg-amber-50/70">
+                      <td className="p-2.5 border border-gray-200 font-bold text-amber-800">
+                        🟠 Alerta Temprana (ORANGE)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-[11px] text-amber-950">
+                        {"(36 ≤ V < 64 ∨ X = 5 ∨ Z = 5) ∧ ¬RED"}
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-amber-900">
+                        45.0 ≤ T_3D &lt; 68.0
+                      </td>
+                      <td className="p-2.5 border border-gray-200 text-gray-800">
+                        Excede la tolerancia institucional del RAF. Requiere plan de acción Quick-Win de 3LD a 30 días.
+                      </td>
+                    </tr>
+                    <tr className="bg-yellow-50/70">
+                      <td className="p-2.5 border border-gray-200 font-bold text-yellow-800">
+                        🟡 Vigilancia / Incubación (YELLOW)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-[11px] text-yellow-950">
+                        {"(15 ≤ V < 36 ∨ T_3D ≥ 30.0) ∧ ¬RED ∧ ¬ORANGE"}
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-yellow-900">
+                        30.0 ≤ T_3D &lt; 45.0
+                      </td>
+                      <td className="p-2.5 border border-gray-200 text-gray-800">
+                        Amenaza en incubación o con velocidad moderada. Asignación de sensores KRI con reporte quincenal.
+                      </td>
+                    </tr>
+                    <tr className="bg-emerald-50/70">
+                      <td className="p-2.5 border border-gray-200 font-bold text-emerald-800">
+                        🟢 Latente / Controlada (GREEN)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-[11px] text-emerald-950">
+                        {"V < 15 ∧ T_3D < 30.0"}
+                      </td>
+                      <td className="p-2.5 border border-gray-200 font-mono text-emerald-900">
+                        T_3D &lt; 30.0 (S_eq &lt; 7.5)
+                      </td>
+                      <td className="p-2.5 border border-gray-200 text-gray-800">
+                        Dentro del apetito de riesgo emergente bajo control operativo ordinario de la 1ra Línea de Defensa.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Fundamentación Teórica de la Cota Cúbica y Forzamiento Disyuntivo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <strong className="text-gray-900 font-bold block">
+                    Fundamento Matemático de la Cota Cúbica V = 64 (4³ = 64):
+                  </strong>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    El valor 64 marca el punto crítico de transición de fase. Corresponde al volumen del subcubo de orden superior (X ≥ 4, Y ≥ 4, Z ≥ 4), donde la convergencia simultánea de los tres factores detona un acoplamiento catastrófico no amortiguable.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded border border-gray-200 bg-gray-50/50 space-y-1.5">
+                  <strong className="text-gray-900 font-bold block">
+                    Regla de Forzamiento Disyuntivo ∨ (X = 5 ∨ Z = 5):
+                  </strong>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Evita que eventos con contagio sistémico catastrófico (X=5) o velocidad relámpago instantánea (Z=5) caigan en Zona Verde debido a un volumen bajo provocado por Y=1. Todo evento con X=5 o Z=5 escala inmediatamente al menos a Zona Naranja.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* SECCIÓN 5: BRECHA DE VISIBILIDAD, DEMOSTRACIÓN CANÓNICA & CALCULADORA */}
+          {/* ========================================================================= */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-purple-600" />
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  Sección 5 — El Efecto Punto Ciego (Brecha 2D vs. 3D), Demostración Canónica y Calculadora Interactiva
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                Δ_vis = S_eq(3D) - Score_2D
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-700 leading-relaxed space-y-4">
+              <p>
+                La <strong>Brecha de Visibilidad (Δ_vis)</strong> cuantifica el grado de miopía o subestimación regulatoria originada por evaluar un riesgo emergente exclusivamente bajo la matriz bidimensional frecuentista (P × I):
+              </p>
+
+              <div className="bg-[#1F242B] text-gray-100 p-3.5 rounded font-mono text-xs border border-gray-800 flex items-center justify-between">
+                <span className="text-[#C0D725] font-bold text-sm">
+                  {"Δ_vis = S_eq(3D) - Score_2D = ( T_3D / 4.0 ) - ( P_res · I_res )"}
+                </span>
+                <span className="text-gray-400 text-[10px]">
+                  Alerta Punto Ciego: si Δ_vis ≥ +5.0 puntos
+                </span>
+              </div>
+
+              {/* Demostración Paso a Paso del Caso Canónico */}
+              <div className="p-4 rounded border border-purple-200 bg-purple-50/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-purple-200 pb-2">
+                  <span className="font-bold text-purple-950 text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-purple-700" />
+                    <span>Demostración Paso a Paso del Caso Canónico Documentado (Ataque Destructivo a SPEI)</span>
+                  </span>
+                  <span className="text-[10px] font-mono bg-purple-200 text-purple-900 font-bold px-2 py-0.5 rounded">
+                    Δ_vis = +20.74 Puntos
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                  <div className="bg-white p-3 rounded border border-purple-100 space-y-1.5">
+                    <strong className="text-gray-900 block font-bold">1. Evaluación en Matriz Clásica 2D (CNBV):</strong>
+                    <p className="text-gray-600">
+                      Como no existe antecedente histórico reciente en el banco, el evaluador asigna <strong>Probabilidad P = 1 (Remota)</strong> e <strong>Impacto I = 4 (Crítico)</strong>:
+                    </p>
+                    <p className="font-mono font-bold text-emerald-700 pt-1">
+                      Score_2D = 1 × 4 = 4.0 / 25 ➔ Zona Verde (Riesgo Aceptable / Monitoreo Anual)
+                    </p>
+                    <p className="text-gray-500 text-[10px]">
+                      Conclusión 2D: La institución no asigna capital, no activa BCP y descarta inversión en kill-switch.
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-3 rounded border border-purple-100 space-y-1.5">
+                    <strong className="text-gray-900 block font-bold">2. Evaluación en Cubo 3D de Riesgos Emergentes:</strong>
+                    <p className="text-gray-600">
+                      Coordenadas reales: <strong>Contagio X = 5</strong> (colapso de liquidación interbancaria), <strong>Incertidumbre Y = 4</strong> (ciberarma zero-day), <strong>Velocidad Z = 5</strong> (propagación en 15 minutos):
+                    </p>
+                    <div className="font-mono text-[10px] text-gray-800 space-y-0.5 pt-1">
+                      <p>• Volumen: V = 5 × 4 × 5 = 100</p>
+                      <p>• Aporte Volumétrico: 0.45 × (100 / 125) = <strong>0.3600</strong></p>
+                      <p>• ‖R⃗‖_W² = 0.40(25) + 0.25(16) + 0.35(25) = 10 + 4 + 8.75 = 22.75</p>
+                      <p>• Aporte Cuadrático: 0.55 × (22.75 / 25) = <strong>0.5005</strong></p>
+                      <p>• Combinación Convexa = 0.3600 + 0.5005 = <strong>0.8605</strong></p>
+                      <p>• Factor OODA: Como X=5 ≥ 4 y Z=5 ≥ 4 ⟹ <strong>γ = 1.15</strong></p>
+                      <p>• Tensor: T_3D = min(100, 0.8605 × 100 × 1.15) = <strong>98.96</strong></p>
+                      <p>• Score Homologado: S_eq = 98.96 / 4.0 = <strong>24.74 / 25 (Zona Roja Crítica)</strong></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded bg-rose-100 border border-rose-200 text-rose-950 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span><strong>Ecuación de Brecha de Visibilidad:</strong> Δ_vis = S_eq(3D) - Score_2D = 24.74 - 4.00</span>
+                  <span className="bg-rose-700 text-white font-bold px-2 py-0.5 rounded text-xs">
+                    Δ_vis = +20.74 (PUNTO CIEGO LETAL)
+                  </span>
+                </div>
+              </div>
+
+              {/* CALCULADORA INTERACTIVA EN VIVO */}
+              <div className="border-2 border-[#3299A8]/40 rounded-bx p-4 bg-gradient-to-b from-gray-50 to-white shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-[#3299A8]" />
+                    <div>
+                      <h5 className="font-bold text-gray-900 text-xs uppercase tracking-wide">
+                        Laboratorio Cuantitativo Interactivo: Calculadora en Vivo de Brecha de Visibilidad (Δ_vis)
+                      </h5>
+                      <span className="text-[11px] text-gray-500">
+                        Ajusta los sliders de la Matriz 2D y el Cubo 3D para auditar la respuesta del motor en tiempo real:
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Botones de Presets */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        setCalcP(1);
+                        setCalcI(4);
+                        setCalcX(5);
+                        setCalcY(4);
+                        setCalcZ(5);
+                      }}
+                      className="text-[10px] bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      Caso Canónico (Δ = +20.74)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCalcP(1);
+                        setCalcI(5);
+                        setCalcX(5);
+                        setCalcY(1);
+                        setCalcZ(5);
+                      }}
+                      className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      Choque Relámpago (X=5, Z=5)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCalcP(1);
+                        setCalcI(1);
+                        setCalcX(1);
+                        setCalcY(1);
+                        setCalcZ(1);
+                      }}
+                      className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      Vóxel Mínimo (1,1,1)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCalcP(5);
+                        setCalcI(5);
+                        setCalcX(5);
+                        setCalcY(5);
+                        setCalcZ(5);
+                      }}
+                      className="text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      Vóxel Máximo (5,5,5)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sliders de Entrada */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Controles 2D */}
+                  <div className="bg-white p-3.5 rounded border border-gray-200 space-y-3">
+                    <span className="font-bold text-gray-900 text-xs block border-b border-gray-100 pb-1">
+                      Parámetros de Entrada Matriz Tradicional 2D (P × I):
+                    </span>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-semibold text-gray-700">Probabilidad 2D (P):</span>
+                        <span className="font-mono font-bold text-gray-900">{calcP} / 5</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={calcP}
+                        onChange={(e) => setCalcP(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3299A8]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-semibold text-gray-700">Impacto 2D (I):</span>
+                        <span className="font-mono font-bold text-gray-900">{calcI} / 5</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={calcI}
+                        onChange={(e) => setCalcI(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#3299A8]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Controles 3D */}
+                  <div className="bg-white p-3.5 rounded border border-gray-200 space-y-3">
+                    <span className="font-bold text-gray-900 text-xs block border-b border-gray-100 pb-1">
+                      Parámetros de Entrada Cubo Tridimensional 3D (X, Y, Z):
+                    </span>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-semibold text-blue-800">Contagio Sistémico (X):</span>
+                        <span className="font-mono font-bold text-blue-900">{calcX} / 5</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={calcX}
+                        onChange={(e) => setCalcX(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-semibold text-purple-800">Incertidumbre Epistémica (Y):</span>
+                        <span className="font-mono font-bold text-purple-900">{calcY} / 5</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={calcY}
+                        onChange={(e) => setCalcY(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-semibold text-amber-800">Velocidad / Onset Speed (Z):</span>
+                        <span className="font-mono font-bold text-amber-900">{calcZ} / 5</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={calcZ}
+                        onChange={(e) => setCalcZ(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tarjetas de Resultados Reactivos en Vivo */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Score 2D */}
+                  <div className="p-3 rounded border border-gray-200 bg-white space-y-1">
+                    <span className="text-[10px] text-gray-500 uppercase font-mono block">
+                      Matriz Clásica 2D
+                    </span>
+                    <div className="text-xl font-bold font-mono text-gray-900">
+                      {calcScore2D} <span className="text-xs font-normal text-gray-500">/ 25</span>
+                    </div>
+                    <span
+                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
+                        calcScore2D >= 15
+                          ? "bg-rose-100 text-rose-800"
+                          : calcScore2D >= 10
+                          ? "bg-amber-100 text-amber-800"
+                          : calcScore2D >= 6
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {calcScore2D >= 15
+                        ? "Zona Roja"
+                        : calcScore2D >= 10
+                        ? "Zona Naranja"
+                        : calcScore2D >= 6
+                        ? "Zona Amarilla"
+                        : "Zona Verde"}
+                    </span>
+                  </div>
+
+                  {/* Score 3D */}
+                  <div className="p-3 rounded border border-gray-200 bg-white space-y-1">
+                    <span className="text-[10px] text-gray-500 uppercase font-mono block">
+                      Cubo 3D (T_3D & S_eq)
+                    </span>
+                    <div className="text-xl font-bold font-mono text-[#1F242B]">
+                      {calcS_eq} <span className="text-xs font-normal text-gray-500">/ 25</span>
+                      <span className="text-xs font-normal text-gray-400 ml-1">({calcT3D}%)</span>
+                    </div>
+                    <span
+                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
+                        calcT3D >= 68 || calcV >= 64 || (calcX >= 4 && calcZ >= 4)
+                          ? "bg-rose-100 text-rose-800"
+                          : calcT3D >= 45 || calcV >= 36 || calcX === 5 || calcZ === 5
+                          ? "bg-amber-100 text-amber-800"
+                          : calcT3D >= 30 || calcV >= 15
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {calcT3D >= 68 || calcV >= 64 || (calcX >= 4 && calcZ >= 4)
+                        ? "Zona Roja Crítica"
+                        : calcT3D >= 45 || calcV >= 36 || calcX === 5 || calcZ === 5
+                        ? "Zona Naranja Alerta"
+                        : calcT3D >= 30 || calcV >= 15
+                        ? "Zona Amarilla Vigilancia"
+                        : "Zona Verde Controlada"}
+                    </span>
+                  </div>
+
+                  {/* Brecha de Visibilidad */}
+                  <div className="p-3 rounded border border-gray-200 bg-white space-y-1">
+                    <span className="text-[10px] text-gray-500 uppercase font-mono block">
+                      Brecha de Visibilidad (Δ_vis)
+                    </span>
+                    <div
+                      className={`text-xl font-bold font-mono ${
+                        calcDeltaVis >= 5
+                          ? "text-rose-600"
+                          : calcDeltaVis > 0
+                          ? "text-amber-600"
+                          : "text-emerald-600"
+                      }`}
+                    >
+                      {calcDeltaVis >= 0 ? `+${calcDeltaVis}` : calcDeltaVis}{" "}
+                      <span className="text-xs font-normal text-gray-500">pts</span>
+                    </div>
+                    <span
+                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
+                        calcDeltaVis >= 10
+                          ? "bg-rose-600 text-white animate-pulse"
+                          : calcDeltaVis >= 5
+                          ? "bg-amber-500 text-white"
+                          : calcDeltaVis > 0
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {calcDeltaVis >= 10
+                        ? "🚨 PUNTO CIEGO CRÍTICO"
+                        : calcDeltaVis >= 5
+                        ? "⚠️ SUBESTIMACIÓN SEVERA"
+                        : calcDeltaVis > 0
+                        ? "Ajuste Moderado"
+                        : "Sin Subestimación"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desglose Matemático Reactivo de Términos */}
+                <div className="bg-[#1F242B] text-gray-200 p-3 rounded font-mono text-[11px] space-y-1 border border-gray-800">
+                  <div className="text-[#C0D725] font-bold text-xs flex justify-between">
+                    <span># DESGLOSE ANALÍTICO PASO A PASO EN VIVO</span>
+                    <span>Motor v3.5 (Python/TS)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-gray-300 text-[10px]">
+                    <p>• Volumen Bruto (V) = {calcX} × {calcY} × {calcZ} = <strong>{calcV}</strong> / 125</p>
+                    <p>• Aporte Volumétrico = 0.45 × ({calcV}/125) = <strong>{calcVolNormTerm.toFixed(4)}</strong></p>
+                    <p>• Norma Cuadrática (‖R⃗‖_W²) = 0.40({calcX}²) + 0.25({calcY}²) + 0.35({calcZ}²) = <strong>{(calcWeightedQuadNorm * 25).toFixed(2)}</strong></p>
+                    <p>• Aporte Cuadrático = 0.55 × (‖R⃗‖_W²/25) = <strong>{calcQuadWeightedTerm.toFixed(4)}</strong></p>
+                    <p>• Combinación Convexa Base = {calcVolNormTerm.toFixed(4)} + {calcQuadWeightedTerm.toFixed(4)} = <strong>{calcConvexComb.toFixed(4)}</strong></p>
+                    <p>• Factor Sinergia OODA γ({calcX},{calcZ}) = <strong className={calcGamma > 1.0 ? "text-amber-400 font-bold" : ""}>{calcGamma.toFixed(2)}x</strong></p>
+                    <p>• Tensor 3D T_3D = min(100, {calcConvexComb.toFixed(4)} × 100 × {calcGamma.toFixed(2)}) = <strong className="text-[#C0D725]">{calcT3D}</strong></p>
+                    <p>• Score Homologado S_eq = {calcT3D} / 4.0 = <strong className="text-cyan-300">{calcS_eq}</strong></p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1706,7 +2273,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
             <strong className="text-gray-900 font-serif text-sm block mb-0.5">
               Ecuaciones Maestras de los Motores Cuantitativos de B×+
             </strong>
-            A continuación se presentan las 6 formulaciones analíticas implementadas en el código fuente (<code>src/lib/engines/*</code>) para verificación de auditores internos, externos y la CNBV:
+            A continuación se presentan las 7 formulaciones analíticas implementadas en el código fuente (<code>src/lib/engines/*</code>) para verificación de auditores internos, externos y la CNBV:
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1848,6 +2415,35 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
               </div>
               <p className="text-[11px] text-gray-600 leading-relaxed">
                 Cada evento (alta de riesgo, firma de plan, importación de layout o aprobación) se sella en un bloque criptográficamente encadenado donde cualquier intento de manipulación en la base de datos invalida la cadena histórica ante la CNBV.
+              </p>
+            </div>
+
+            {/* Fórmula 7: Tensor 3D y Brecha de Visibilidad */}
+            <div className="bg-white rounded-bx p-4 shadow-card border border-gray-200 space-y-2.5 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-900 font-serif text-xs">
+                  7. Tensor de Tensión Tridimensional Compuesto y Brecha de Visibilidad (Cubo 3D vs. Matriz 2D)
+                </span>
+                <span className="text-[10px] font-mono text-[#C0D725] bg-gray-900 px-1.5 py-0.5 rounded border border-gray-700">
+                  emerging-risk-cube-engine.ts & scripts/emerging_risk_cube_engine.py
+                </span>
+              </div>
+              <div className="bg-[#1F242B] text-gray-200 p-3 rounded font-mono text-[11px] space-y-1">
+                <div className="text-[#C0D725]">
+                  T_3D = min(100.0, [0.45 · (V / 125) + 0.55 · ((0.40·X² + 0.25·Y² + 0.35·Z²) / 25)] · 100 · γ(X,Z))
+                </div>
+                <div className="text-gray-300 text-[10px]">
+                  γ(X,Z) = 1.15 si (X ≥ 4 ∧ Z ≥ 4); de lo contrario 1.00 (Ciclo OODA)
+                </div>
+                <div className="text-cyan-300 text-[10px]">
+                  S_eq = round(T_3D / 4.0, 2) ∈ [1.0, 25.0]  |  Score_2D = P · I ∈ [1, 25]
+                </div>
+                <div className="text-rose-400 font-bold text-[10px]">
+                  Δ_vis = S_eq(3D) - Score_2D  (Brecha de Visibilidad / Alerta Punto Ciego)
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed">
+                Supera el sesgo frecuentista tradicional integrando <strong>Contagio Sistémico (X)</strong>, <strong>Incertidumbre Epistémica (Y)</strong> y <strong>Velocidad (Z)</strong> mediante una combinación convexa de densidad volumétrica (45%) y norma cuadrática ponderada (55%) con amplificación sinérgica OODA (γ = 1.15). La brecha Δ_vis cuantifica la subestimación de la matriz 2D bajo el marco de gestión paralela (CNBV CUB Art. 88 y Basilea III).
               </p>
             </div>
           </div>

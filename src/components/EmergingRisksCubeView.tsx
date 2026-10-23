@@ -58,13 +58,15 @@ export function EmergingRisksCubeView({
   const [viewAngle, setViewAngle] = useState<AngleView>("ISO_FRONT");
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
 
-  // Estados del Simulador Python
+  // Estados del Simulador Vectorial 3D (Motor Python & Art. 88 CUB)
   const [simX, setSimX] = useState<number>(4);
   const [simY, setSimY] = useState<number>(4);
   const [simZ, setSimZ] = useState<number>(4);
-  const [simDefX, setSimDefX] = useState<number>(0);
-  const [simDefY, setSimDefY] = useState<number>(0);
-  const [simDefZ, setSimDefZ] = useState<number>(0);
+  const [simDeltaX, setSimDeltaX] = useState<number>(0.8);
+  const [simDeltaY, setSimDeltaY] = useState<number>(0.6);
+  const [simDeltaZ, setSimDeltaZ] = useState<number>(0.8);
+  const [simForceNF, setSimForceNF] = useState<boolean>(false);
+  const [simHasRealtime, setSimHasRealtime] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -75,10 +77,13 @@ export function EmergingRisksCubeView({
   const [newCause, setNewCause] = useState("");
   const [newConsequence, setNewConsequence] = useState("");
   const [newProcessId, setNewProcessId] = useState("");
+  const [newProcessNodeId, setNewProcessNodeId] = useState("");
   const [newCatCode, setNewCatCode] = useState<EmergingCategoryCode>("TECH_CONCENTRATION");
   const [newX, setNewX] = useState(4);
   const [newY, setNewY] = useState(4);
   const [newZ, setNewZ] = useState(4);
+  const [newP2D, setNewP2D] = useState(1);
+  const [newI2D, setNewI2D] = useState(4);
   const [isCreating, setIsCreating] = useState(false);
 
   // Modal Nuevo Plan Quick-Win
@@ -104,6 +109,11 @@ export function EmergingRisksCubeView({
             setSimX(defaultRisk.systemicImpactX);
             setSimY(defaultRisk.uncertaintyY);
             setSimZ(defaultRisk.materializationSpeedZ);
+            setSimDeltaX(defaultRisk.mitigationDeltaX !== undefined ? defaultRisk.mitigationDeltaX : 0.8);
+            setSimDeltaY(defaultRisk.mitigationDeltaY !== undefined ? defaultRisk.mitigationDeltaY : 0.6);
+            setSimDeltaZ(defaultRisk.mitigationDeltaZ !== undefined ? defaultRisk.mitigationDeltaZ : 0.8);
+            setSimForceNF(Boolean(defaultRisk.hasNFControlPenalty));
+            setSimHasRealtime(Boolean(defaultRisk.hasRealtimeControl));
           }
         }
       }
@@ -130,69 +140,104 @@ export function EmergingRisksCubeView({
       setSimX(activeRisk.systemicImpactX);
       setSimY(activeRisk.uncertaintyY);
       setSimZ(activeRisk.materializationSpeedZ);
-      setSimDefX(Math.round(activeRisk.mitigationDeltaX * 100));
-      setSimDefY(Math.round(activeRisk.mitigationDeltaY * 100));
-      setSimDefZ(Math.round(activeRisk.mitigationDeltaZ * 100));
+      setSimDeltaX(activeRisk.mitigationDeltaX !== undefined ? activeRisk.mitigationDeltaX : 0.8);
+      setSimDeltaY(activeRisk.mitigationDeltaY !== undefined ? activeRisk.mitigationDeltaY : 0.6);
+      setSimDeltaZ(activeRisk.mitigationDeltaZ !== undefined ? activeRisk.mitigationDeltaZ : 0.8);
+      setSimForceNF(Boolean(activeRisk.hasNFControlPenalty));
+      setSimHasRealtime(Boolean(activeRisk.hasRealtimeControl));
     }
   }, [activeRisk]);
 
-  // Opciones de procesos bancarios
-  const processOptions: CustomSelectOption[] = useMemo(() => {
-    const opts: CustomSelectOption[] = [
-      {
-        value: "ALL",
-        label: "Todos los Procesos (Portafolio 3D)",
-        badge: "Consolidado",
-        description: "Visualización transversal de amenazas emergentes en B×+",
-      },
-    ];
+  // Cálculo Matemático en Vivo (Cero Mockups) que reacciona a los sliders del inspector
+  const liveMetrics = useMemo(() => {
+    if (!activeRisk) return null;
 
-    if (data?.emergingRisks) {
-      const seen = new Set<string>();
-      data.emergingRisks.forEach((r: any) => {
-        if (r.processId && !seen.has(r.processId)) {
-          seen.add(r.processId);
-          opts.push({
-            value: r.processId,
-            label: `${r.processCode}: ${r.processName}`,
-            badge: r.processCode,
-            description: r.processName,
-          });
-        }
-      });
+    const xInh = Number(simX);
+    const yInh = Number(simY);
+    const zInh = Number(simZ);
+
+    let dX = Number(simDeltaX);
+    let dY = Number(simDeltaY);
+    let dZ = Number(simDeltaZ);
+
+    // Truncamiento Art. 88 CUB para controles No Formalizados (NF)
+    if (simForceNF) {
+      dX = Math.min(dX, 0.40);
+      dY = Math.min(dY, 0.40);
+      dZ = Math.min(dZ, 0.40);
     }
-    return opts;
-  }, [data?.emergingRisks]);
 
-  // Filtro de riesgos visibles según capa de velocidad Z
-  const visibleRisks = useMemo(() => {
-    if (!data?.emergingRisks) return [];
-    if (speedLayerZ === "ALL") return data.emergingRisks;
-    return data.emergingRisks.filter((r: any) => {
-      const zVal = cubeMode === "INHERENT" ? r.materializationSpeedZ : Math.round(r.residualZ);
-      return zVal === speedLayerZ;
-    });
-  }, [data?.emergingRisks, speedLayerZ, cubeMode]);
+    // Condición de falla de velocidad (Z): Si Z >= 4 y no hay control en tiempo real, Delta Z = 0
+    const zFailure = zInh >= 3.8 && !simHasRealtime;
+    if (zFailure) {
+      dZ = 0.0;
+    }
 
-  // Conteo de riesgos de velocidad inmediata en la vista actual
-  const highSpeedCount = useMemo(() => {
-    if (!visibleRisks) return 0;
-    return visibleRisks.filter((r: any) => {
-      const z = cubeMode === "INHERENT" ? r.materializationSpeedZ : r.residualZ;
-      return z >= 3.8;
-    }).length;
-  }, [visibleRisks, cubeMode]);
+    const xRes = Math.max(1.0, Math.min(5.0, Number((xInh - dX).toFixed(2))));
+    const yRes = Math.max(1.0, Math.min(5.0, Number((yInh - dY).toFixed(2))));
+    const zRes = Math.max(1.0, Math.min(5.0, Number((zInh - dZ).toFixed(2))));
+
+    const vInh = Number((xInh * yInh * zInh).toFixed(2));
+    const vRes = Number((xRes * yRes * zRes).toFixed(2));
+
+    const volNormalizedTerm = Number((0.45 * (vRes / 125.0)).toFixed(4));
+    const weightedQuadraticNorm = Number(
+      ((0.40 * xRes * xRes + 0.25 * yRes * yRes + 0.35 * zRes * zRes) / 25.0).toFixed(4)
+    );
+    const quadWeightedTerm = Number((0.55 * weightedQuadraticNorm).toFixed(4));
+    const convexCombination = Number((volNormalizedTerm + quadWeightedTerm).toFixed(4));
+    const synergyFactorGamma = (xRes >= 3.8 && zRes >= 3.8) ? 1.15 : 1.0;
+    const tensorScore3D = Math.min(100.0, Math.max(1.0, Number((convexCombination * 100.0 * synergyFactorGamma).toFixed(2))));
+    const equivalentScore25 = Math.min(25.0, Math.max(1.0, Number((tensorScore3D / 4.0).toFixed(2))));
+
+    const pRes = Number(activeRisk.matrix2D?.residualProbability || activeRisk.matrix2D?.inherentProbability || 1.0);
+    const iRes = Number(activeRisk.matrix2D?.residualImpact || activeRisk.matrix2D?.inherentImpact || 1.0);
+    const score2D = Number((activeRisk.matrix2D?.residualScore !== undefined ? activeRisk.matrix2D.residualScore : pRes * iRes).toFixed(2));
+    const visibilityGapDelta = Number((equivalentScore25 - score2D).toFixed(2));
+
+    const calcZone = (vol: number, x: number, y: number, z: number, tension: number): "GREEN" | "YELLOW" | "ORANGE" | "RED" => {
+      if (vol >= 64.0 || (x >= 4.0 && z >= 4.0) || tension >= 68.0) return "RED";
+      if (vol >= 36.0 || x >= 4.5 || z >= 4.5 || tension >= 45.0) return "ORANGE";
+      if (vol >= 15.0 || tension >= 22.0) return "YELLOW";
+      return "GREEN";
+    };
+
+    const zoneRes = calcZone(vRes, xRes, yRes, zRes, tensorScore3D);
+    const zoneInh = calcZone(vInh, xInh, yInh, zInh, 80);
+
+    return {
+      xInh,
+      yInh,
+      zInh,
+      dX,
+      dY,
+      dZ,
+      xRes,
+      yRes,
+      zRes,
+      vInh,
+      vRes,
+      volNormalizedTerm,
+      weightedQuadraticNorm,
+      quadWeightedTerm,
+      convexCombination,
+      synergyFactorGamma,
+      tensorScore3D,
+      equivalentScore25,
+      score2D,
+      visibilityGapDelta,
+      zoneRes,
+      zoneInh,
+      zFailure,
+    };
+  }, [activeRisk, simX, simY, simZ, simDeltaX, simDeltaY, simDeltaZ, simForceNF, simHasRealtime]);
 
   // Guardar simulación en vivo con el Motor Python
   const handleSaveSimulation = async () => {
-    if (!activeRisk) return;
+    if (!activeRisk || !liveMetrics) return;
     setIsSimulating(true);
     setSaveStatus(null);
     try {
-      const overrideX = Number(Math.max(1, simX * (1 - simDefX / 100)).toFixed(2));
-      const overrideY = Number(Math.max(1, simY * (1 - simDefY / 100)).toFixed(2));
-      const overrideZ = Number(Math.max(1, simZ * (1 - simDefZ / 100)).toFixed(2));
-
       const res = await fetch("/api/emerging-risks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,16 +247,18 @@ export function EmergingRisksCubeView({
           systemicImpactX: simX,
           uncertaintyY: simY,
           materializationSpeedZ: simZ,
-          overrideResidualX: overrideX,
-          overrideResidualY: overrideY,
-          overrideResidualZ: overrideZ,
+          overrideDeltaX: simDeltaX,
+          overrideDeltaY: simDeltaY,
+          overrideDeltaZ: simDeltaZ,
+          forceNF: simForceNF,
+          simHasRealtimeControl: simHasRealtime,
           userRole: currentRole,
         }),
       });
 
       const resJson = await res.json();
       if (resJson.success) {
-        setSaveStatus("Cálculo recalculado y persistido con éxito en el Motor Python 3D.");
+        setSaveStatus("Cálculo formal recalculado y persistido con éxito en el Motor Python 3D.");
         setTimeout(() => setSaveStatus(null), 3500);
         await fetchData();
       } else {
@@ -225,6 +272,31 @@ export function EmergingRisksCubeView({
     }
   };
 
+  // Vincular control tipificado por eje
+  const handleAttachTypifiedControl = async (axis: "X" | "Y" | "Z") => {
+    if (!activeRisk) return;
+    try {
+      const res = await fetch("/api/emerging-risks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ATTACH_TYPIFIED_CONTROL",
+          riskId: activeRisk.id,
+          axis,
+          userRole: currentRole,
+        }),
+      });
+      const resJson = await res.json();
+      if (resJson.success) {
+        if (axis === "Z") setSimHasRealtime(true);
+        setSaveStatus(`Control tipificado para Eje ${axis} vinculado exitosamente.`);
+        setTimeout(() => setSaveStatus(null), 3500);
+        await fetchData();
+      }
+    } catch (err) {
+      console.error("Error attaching control:", err);
+    }
+  };
   // Crear nuevo riesgo emergente 3D
   const handleCreateRisk = async () => {
     if (!newCode || !newTitle || !newProcessId) {
@@ -243,10 +315,13 @@ export function EmergingRisksCubeView({
           cause: newCause,
           consequence: newConsequence,
           processId: newProcessId,
+          processNodeId: newProcessNodeId || undefined,
           emergingCategoryCode: newCatCode,
           systemicImpactX: newX,
           uncertaintyY: newY,
           materializationSpeedZ: newZ,
+          inherentProbability: newP2D,
+          inherentImpact: newI2D,
           userRole: currentRole,
         }),
       });
@@ -257,6 +332,9 @@ export function EmergingRisksCubeView({
         setNewTitle("");
         setNewCause("");
         setNewConsequence("");
+        setNewProcessNodeId("");
+        setNewP2D(1);
+        setNewI2D(4);
         await fetchData();
       } else {
         alert("Error: " + (json.error || "No se pudo crear"));
@@ -305,11 +383,46 @@ export function EmergingRisksCubeView({
     }
   };
 
-  // Coordenadas calculadas en vivo en el simulador
-  const liveResX = useMemo(() => Math.max(1, Number((simX * (1 - simDefX / 100)).toFixed(2))), [simX, simDefX]);
-  const liveResY = useMemo(() => Math.max(1, Number((simY * (1 - simDefY / 100)).toFixed(2))), [simY, simDefY]);
-  const liveResZ = useMemo(() => Math.max(1, Number((simZ * (1 - simDefZ / 100)).toFixed(2))), [simZ, simDefZ]);
-  const liveVol = useMemo(() => Number((liveResX * liveResY * liveResZ).toFixed(1)), [liveResX, liveResY, liveResZ]);
+  // Opciones de procesos para selector
+  const processOptions: CustomSelectOption[] = useMemo(() => {
+    const list: CustomSelectOption[] = [
+      { value: "ALL", label: `Todos los Procesos (${data?.totalEmergingRisks || 0})` },
+    ];
+    if (data?.processSummary) {
+      data.processSummary.forEach((p: any) => {
+        list.push({
+          value: p.processId,
+          label: `${p.processCode} • ${p.processName} (${p.count})`,
+        });
+      });
+    }
+    return list;
+  }, [data]);
+
+  // Conteo de amenazas hiper-veloces (Z >= 4)
+  const highSpeedCount = useMemo(() => {
+    if (!data?.emergingRisks) return 0;
+    return data.emergingRisks.filter((r: any) => r.materializationSpeedZ >= 3.8 || r.residualZ >= 3.8).length;
+  }, [data?.emergingRisks]);
+
+  // Riesgos visibles según filtros activos
+  const visibleRisks = useMemo(() => {
+    if (!data?.emergingRisks) return [];
+    return data.emergingRisks.filter((r: any) => {
+      if (selectedProcessId !== "ALL" && r.processId !== selectedProcessId) return false;
+      if (selectedCategory !== "ALL" && r.emergingCategoryCode !== selectedCategory) return false;
+      if (speedLayerZ !== "ALL") {
+        const zVal = cubeMode === "INHERENT" ? Math.round(r.materializationSpeedZ) : Math.round(r.residualZ);
+        if (zVal !== speedLayerZ) return false;
+      }
+      return true;
+    });
+  }, [data?.emergingRisks, selectedProcessId, selectedCategory, speedLayerZ, cubeMode]);
+
+  // Volumen vivo calculado reactivamente desde el simulador
+  const liveVol = useMemo(() => {
+    return liveMetrics ? liveMetrics.vRes : 0;
+  }, [liveMetrics]);
 
   // Color de zona 3D
   const getZoneColor = (zone: string) => {
@@ -597,10 +710,192 @@ export function EmergingRisksCubeView({
 
       {/* 4. Lienzo Central en 2 Columnas: Visualizador Cubo 3D + Inspector & Simulador Python */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Columna Izquierda (7 cols): Cubo Isométrico 3D + Proyecciones Ortogonales */}
+        {/* Columna Izquierda (7 cols): Modo Paralelo (2D vs 3D) o Modo Cubo 3D + Proyecciones Ortogonales */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Card del Cubo Isométrico 3D */}
-          <div className="bg-white rounded-bx p-4 shadow-sm border border-gray-200">
+          {cubeMode === "PARALLEL_2D_3D" ? (
+            /* Vista Comparativa Lado a Lado: Matriz Clásica 2D + Homologación 3D & Brecha de Visibilidad (Cero Mockups) */
+            <div className="bg-white rounded-bx p-4 shadow-sm border border-gray-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-[#3299A8]" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">
+                    Gestión Paralela: Matriz 2D Clásica (P × I) vs. Homologación Cúbica 3D (S_eq)
+                  </h3>
+                </div>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-50 text-[#3299A8] font-bold border border-cyan-200">
+                  Brecha de Visibilidad (Δ_vis = S_eq - Score_2D)
+                </span>
+              </div>
+
+              {/* Lado a Lado: 2D Matrix a la izquierda + Homologación 3D a la derecha */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Mitad Izquierda: Matriz Clásica 2D (5x5: P vs I) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-800">
+                      Matriz Operativa 2D (P × I)
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      CNBV 5×5 Estándar
+                    </span>
+                  </div>
+
+                  <div className="relative border border-gray-300 rounded bg-gray-50 p-2">
+                    {/* Eje Y: Probabilidad (5..1) */}
+                    <div className="text-[9px] font-bold text-gray-500 text-center mb-1 uppercase tracking-wider">
+                      ▲ Probabilidad (P ∈ 1..5)
+                    </div>
+
+                    <div className="space-y-1">
+                      {[5, 4, 3, 2, 1].map((pVal) => (
+                        <div key={`p-row-${pVal}`} className="flex items-center gap-1">
+                          <span className="w-4 text-[10px] font-mono font-bold text-gray-600 text-right shrink-0">
+                            {pVal}
+                          </span>
+                          <div className="grid grid-cols-5 gap-1 flex-1">
+                            {[1, 2, 3, 4, 5].map((iVal) => {
+                              const cellScore = pVal * iVal;
+                              const cellZone =
+                                cellScore <= 4
+                                  ? "bg-emerald-100/70 border-emerald-300 text-emerald-900"
+                                  : cellScore <= 9
+                                  ? "bg-yellow-100/70 border-yellow-300 text-yellow-900"
+                                  : cellScore <= 15
+                                  ? "bg-amber-100/70 border-amber-300 text-amber-900"
+                                  : "bg-rose-100/70 border-rose-300 text-rose-900";
+
+                              const matchingRisks = visibleRisks.filter((r: any) => {
+                                const p = Math.round(r.matrix2D?.residualProbability || r.matrix2D?.inherentProbability || 1);
+                                const i = Math.round(r.matrix2D?.residualImpact || r.matrix2D?.inherentImpact || 1);
+                                return p === pVal && i === iVal;
+                              });
+
+                              return (
+                                <div
+                                  key={`cell-${pVal}-${iVal}`}
+                                  className={`h-11 rounded border p-1 flex flex-col justify-between overflow-hidden transition-all ${cellZone}`}
+                                >
+                                  <div className="text-[8px] font-mono text-gray-500/80 leading-none">
+                                    {cellScore}
+                                  </div>
+                                  <div className="flex flex-wrap gap-0.5 overflow-y-auto max-h-7">
+                                    {matchingRisks.map((mr: any) => {
+                                      const isSel = activeRisk?.id === mr.id;
+                                      return (
+                                        <button
+                                          key={mr.id}
+                                          type="button"
+                                          onClick={() => setSelectedRiskId(mr.id)}
+                                          className={`text-[8.5px] px-1 py-0.2 rounded font-mono font-bold truncate max-w-full cursor-pointer transition-transform ${
+                                            isSel
+                                              ? "bg-[#1F242B] text-[#C0D725] ring-2 ring-black scale-105"
+                                              : "bg-white/90 text-gray-900 hover:bg-black hover:text-white"
+                                          }`}
+                                          title={`${mr.code}: ${mr.title} (Score 2D: ${cellScore})`}
+                                        >
+                                          {mr.code}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Eje X: Impacto (1..5) */}
+                    <div className="flex items-center gap-1 mt-1 pl-5">
+                      {[1, 2, 3, 4, 5].map((iVal) => (
+                        <div key={`i-col-${iVal}`} className="flex-1 text-center text-[10px] font-mono font-bold text-gray-600">
+                          {iVal}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[9px] font-bold text-gray-500 text-center mt-0.5 uppercase tracking-wider">
+                      Impacto (I ∈ 1..5) ►
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mitad Derecha: Homologación Cúbica 3D & Ranking de Brecha de Visibilidad */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-800">
+                      Homologación 3D & Brecha (Δ_vis)
+                    </span>
+                    <span className="text-[10px] text-rose-600 font-mono font-bold">
+                      {visibleRisks.filter((r: any) => (r.visibilityGapDelta || 0) >= 3.0).length} en Punto Ciego
+                    </span>
+                  </div>
+
+                  <div className="border border-gray-200 rounded max-h-[300px] overflow-y-auto divide-y divide-gray-100 bg-white">
+                    {visibleRisks
+                      .slice()
+                      .sort((a: any, b: any) => (b.visibilityGapDelta || 0) - (a.visibilityGapDelta || 0))
+                      .map((r: any) => {
+                        const isSel = activeRisk?.id === r.id;
+                        const score2D = r.matrix2D?.residualScore || (r.matrix2D?.residualProbability || 1) * (r.matrix2D?.residualImpact || 1);
+                        const seq3D = r.equivalentScore25 || Number((r.tensorScore3D / 4).toFixed(1));
+                        const gap = r.visibilityGapDelta !== undefined ? r.visibilityGapDelta : Number((seq3D - score2D).toFixed(2));
+                        const isSevereGap = gap >= 6.0;
+
+                        return (
+                          <div
+                            key={r.id}
+                            onClick={() => setSelectedRiskId(r.id)}
+                            className={`p-2 cursor-pointer transition-colors text-xs flex items-center justify-between gap-2 ${
+                              isSel ? "bg-amber-50/80 font-medium" : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-[11px] text-gray-900">
+                                  {r.code}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded border ${r.categoryBadge}`}>
+                                  {r.emergingCategoryShort}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-gray-600 truncate mt-0.5">
+                                {r.title}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
+                                <span>2D: <strong className="text-gray-800">{score2D}/25</strong></span>
+                                <span>→</span>
+                                <span>3D: <strong className="text-rose-600 font-bold">{seq3D}/25</strong></span>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span
+                                className={`inline-block font-mono text-[11px] font-bold px-2 py-0.5 rounded border ${
+                                  isSevereGap
+                                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                                    : gap >= 2.0
+                                    ? "bg-amber-100 text-amber-800 border-amber-300"
+                                    : "bg-gray-100 text-gray-700 border-gray-200"
+                                }`}
+                              >
+                                Δ {gap >= 0 ? "+" : ""}{gap}
+                              </span>
+                              <div className="text-[9px] text-gray-400 mt-0.5 font-sans">
+                                {isSevereGap ? "🚨 Salto Crítico" : gap >= 2.0 ? "⚡ Brecha 3D" : "Congruente"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Card del Cubo Isométrico 3D */}
+              <div className="bg-white rounded-bx p-4 shadow-sm border border-gray-200">
             {/* Header del Canvas 3D */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
               <div className="flex items-center gap-2">
@@ -836,9 +1131,16 @@ export function EmergingRisksCubeView({
 
                 {/* Graficar Vectores 3D de desplazamiento (Inherente -> Residual) */}
                 {visibleRisks.map((r: any) => {
-                  const pInh = project3D(r.systemicImpactX, r.uncertaintyY, r.materializationSpeedZ, viewAngle);
-                  const pRes = project3D(r.residualX, r.residualY, r.residualZ, viewAngle);
                   const isSelected = activeRisk?.id === r.id;
+                  const xInh = isSelected && liveMetrics ? liveMetrics.xInh : r.systemicImpactX;
+                  const yInh = isSelected && liveMetrics ? liveMetrics.yInh : r.uncertaintyY;
+                  const zInh = isSelected && liveMetrics ? liveMetrics.zInh : r.materializationSpeedZ;
+                  const xRes = isSelected && liveMetrics ? liveMetrics.xRes : r.residualX;
+                  const yRes = isSelected && liveMetrics ? liveMetrics.yRes : r.residualY;
+                  const zRes = isSelected && liveMetrics ? liveMetrics.zRes : r.residualZ;
+
+                  const pInh = project3D(xInh, yInh, zInh, viewAngle);
+                  const pRes = project3D(xRes, yRes, zRes, viewAngle);
 
                   return (
                     <g key={`vec-${r.id}`}>
@@ -848,35 +1150,42 @@ export function EmergingRisksCubeView({
                         y1={pInh.y}
                         x2={pRes.x}
                         y2={pRes.y}
-                        stroke="#4B5563"
-                        strokeWidth={isSelected ? "2" : "1.2"}
-                        strokeDasharray="3 2"
-                        opacity={isSelected ? "0.9" : "0.5"}
+                        stroke={isSelected ? "#0284C7" : "#4B5563"}
+                        strokeWidth={isSelected ? "2.5" : "1.2"}
+                        strokeDasharray={isSelected ? "4 2" : "3 2"}
+                        opacity={isSelected ? "0.95" : "0.5"}
                       />
                       {/* Punto fantasma Inherente */}
                       <circle
                         cx={pInh.x}
                         cy={pInh.y}
-                        r="3"
+                        r={isSelected ? "4" : "3"}
                         fill="#F3F4F6"
-                        stroke="#4B5563"
-                        strokeWidth="1.2"
-                        opacity="0.8"
+                        stroke={isSelected ? "#0284C7" : "#4B5563"}
+                        strokeWidth={isSelected ? "1.8" : "1.2"}
+                        opacity="0.85"
                       />
                     </g>
                   );
                 })}
 
-                {/* Graficar Nodos Tridimensionales de cada Riesgo */}
+                {/* Graficar Nodos Tridimensionales de cada Riesgo con Movimiento en Vivo */}
                 {visibleRisks.map((r: any) => {
-                  const xCoord = cubeMode === "INHERENT" ? r.systemicImpactX : r.residualX;
-                  const yCoord = cubeMode === "INHERENT" ? r.uncertaintyY : r.residualY;
-                  const zCoord = cubeMode === "INHERENT" ? r.materializationSpeedZ : r.residualZ;
-                  const p = project3D(xCoord, yCoord, zCoord, viewAngle);
-
-                  const zone = cubeMode === "INHERENT" ? r.cubeZoneInherent : r.cubeZoneResidual;
-                  const color = getZoneColor(zone);
                   const isSelected = activeRisk?.id === r.id;
+                  let xCoord = cubeMode === "INHERENT" ? r.systemicImpactX : r.residualX;
+                  let yCoord = cubeMode === "INHERENT" ? r.uncertaintyY : r.residualY;
+                  let zCoord = cubeMode === "INHERENT" ? r.materializationSpeedZ : r.residualZ;
+                  let zone = cubeMode === "INHERENT" ? r.cubeZoneInherent : r.cubeZoneResidual;
+
+                  if (isSelected && liveMetrics) {
+                    xCoord = cubeMode === "INHERENT" ? liveMetrics.xInh : liveMetrics.xRes;
+                    yCoord = cubeMode === "INHERENT" ? liveMetrics.yInh : liveMetrics.yRes;
+                    zCoord = cubeMode === "INHERENT" ? liveMetrics.zInh : liveMetrics.zRes;
+                    zone = cubeMode === "INHERENT" ? liveMetrics.zoneInh : liveMetrics.zoneRes;
+                  }
+
+                  const p = project3D(xCoord, yCoord, zCoord, viewAngle);
+                  const color = getZoneColor(zone);
                   const isHighSpeed = zCoord >= 3.8;
 
                   return (
@@ -890,7 +1199,7 @@ export function EmergingRisksCubeView({
                         <circle
                           cx={p.x}
                           cy={p.y}
-                          r="11"
+                          r="12"
                           fill="none"
                           stroke="#1F242B"
                           strokeWidth="2.5"
@@ -898,14 +1207,14 @@ export function EmergingRisksCubeView({
                         />
                       )}
 
-                      {/* Nodo principal (estático, sin animaciones ni parpadeos) */}
+                      {/* Nodo principal */}
                       <circle
                         cx={p.x}
                         cy={p.y}
-                        r={isSelected ? "7" : "5.5"}
+                        r={isSelected ? "7.5" : "5.5"}
                         fill={color}
-                        stroke={isHighSpeed ? "#EF4444" : "#111827"}
-                        strokeWidth={isHighSpeed ? "2" : "1.5"}
+                        stroke={isHighSpeed ? "#EF4444" : isSelected ? "#0284C7" : "#111827"}
+                        strokeWidth={isHighSpeed || isSelected ? "2.2" : "1.5"}
                       />
 
                       {/* Etiqueta de código en tipografía oscura y legible */}
@@ -913,7 +1222,7 @@ export function EmergingRisksCubeView({
                         x={p.x + 9}
                         y={p.y + 3.5}
                         fill={isSelected ? "#0F766E" : "#111827"}
-                        fontSize={isSelected ? "11" : "9.5"}
+                        fontSize={isSelected ? "11.5" : "9.5"}
                         fontWeight={isSelected ? "bold" : "700"}
                         fontFamily="monospace"
                         className="pointer-events-none select-none"
@@ -943,71 +1252,265 @@ export function EmergingRisksCubeView({
             </div>
           </div>
 
-          {/* 3 Proyecciones Ortogonales del Cubo (Planos 5x5) */}
+          {/* 3 Proyecciones Ortogonales del Cubo (3 Caras 5×5 Reales e Interactivas) */}
           <div className="bg-white rounded-bx p-4 shadow-sm border border-gray-200 space-y-3">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-[#3299A8]" />
-                Proyecciones Ortogonales (3 Caras 5×5)
+                Proyecciones Ortogonales (3 Caras 5×5 Interactivas)
               </h4>
-              <span className="text-[11px] text-gray-500">Descomposición planar del tensor</span>
+              <span className="text-[11px] text-gray-500">Haz clic en cualquier riesgo para seleccionarlo</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              {/* Plano 1: X vs Z (Contagio vs Velocidad) */}
-              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-1.5">
+              {/* Cara 1: Plano X × Z (Contagio vs. Velocidad: Choque Relámpago) */}
+              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900 text-[11px]">Plano X × Z</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-semibold">
+                  <span className="font-bold text-gray-900 text-[11px]">Cara 1: X × Z</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-bold">
                     Choque Relámpago
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-600">
-                  Contagio ($X$) vs. Velocidad ($Z$). Detecta eventos que se propagan en minutos.
-                </p>
-                <div className="text-[11px] font-mono text-gray-700 bg-white p-1.5 rounded border border-gray-200">
-                  {visibleRisks.filter((r: any) => r.residualX >= 3.8 && r.residualZ >= 3.8).length} riesgos en vórtice agudo
+                <div className="text-[10px] text-gray-600">
+                  Eje X (Contagio) vs. Eje Z (Velocidad)
+                </div>
+
+                {/* Matriz 5x5 X × Z */}
+                <div className="border border-gray-300 rounded bg-white p-1.5">
+                  <div className="text-[8px] font-bold text-amber-700 text-center uppercase tracking-wider mb-0.5">
+                    ▲ Velocidad Z
+                  </div>
+                  <div className="space-y-0.5">
+                    {[5, 4, 3, 2, 1].map((zVal) => (
+                      <div key={`xz-z-${zVal}`} className="flex items-center gap-0.5">
+                        <span className="w-3 text-[9px] font-mono text-gray-500 text-right shrink-0">{zVal}</span>
+                        <div className="grid grid-cols-5 gap-0.5 flex-1">
+                          {[1, 2, 3, 4, 5].map((xVal) => {
+                            const isOODA = xVal >= 4 && zVal >= 4;
+                            const isHigh = xVal >= 4 || zVal >= 4;
+                            const cellBg = isOODA
+                              ? "bg-rose-100 border-rose-300 text-rose-900"
+                              : isHigh
+                              ? "bg-amber-100/70 border-amber-300 text-amber-900"
+                              : "bg-gray-50 border-gray-200 text-gray-700";
+
+                            const matching = visibleRisks.filter((r: any) => {
+                              const rx = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.xRes : r.residualX);
+                              const rz = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.zRes : r.residualZ);
+                              return rx === xVal && rz === zVal;
+                            });
+
+                            return (
+                              <div
+                                key={`cell-xz-${xVal}-${zVal}`}
+                                className={`h-7 rounded border flex flex-wrap gap-0.5 items-center justify-center p-0.5 overflow-hidden ${cellBg}`}
+                              >
+                                {matching.map((mr: any) => {
+                                  const isSel = activeRisk?.id === mr.id;
+                                  return (
+                                    <button
+                                      key={mr.id}
+                                      type="button"
+                                      onClick={() => setSelectedRiskId(mr.id)}
+                                      className={`text-[7.5px] px-1 py-0.2 rounded font-mono font-bold truncate max-w-full cursor-pointer ${
+                                        isSel
+                                          ? "bg-[#1F242B] text-[#C0D725] ring-1 ring-black"
+                                          : "bg-white/90 text-gray-900 hover:bg-black hover:text-white"
+                                      }`}
+                                      title={`${mr.code}: ${mr.title} (X=${xVal}, Z=${zVal})`}
+                                    >
+                                      {mr.code}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-0.5 mt-0.5 pl-3.5">
+                    {[1, 2, 3, 4, 5].map((xVal) => (
+                      <div key={`xz-x-${xVal}`} className="flex-1 text-center text-[9px] font-mono text-gray-500">
+                        {xVal}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[8px] font-bold text-blue-700 text-center uppercase tracking-wider mt-0.5">
+                    Contagio X ►
+                  </div>
                 </div>
               </div>
 
-              {/* Plano 2: X vs Y (Contagio vs Incertidumbre) */}
-              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-1.5">
+              {/* Cara 2: Plano X × Y (Contagio vs. Incertidumbre: Cisnes Negros) */}
+              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900 text-[11px]">Plano X × Y</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 font-semibold">
+                  <span className="font-bold text-gray-900 text-[11px]">Cara 2: X × Y</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 font-bold">
                     Cisnes Negros
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-600">
-                  Contagio ($X$) vs. Incertidumbre ($Y$). Identifica eventos inéditos de alto daño.
-                </p>
-                <div className="text-[11px] font-mono text-gray-700 bg-white p-1.5 rounded border border-gray-200">
-                  {visibleRisks.filter((r: any) => r.residualX >= 3.8 && r.residualY >= 3.8).length} amenazas sistémicas complejas
+                <div className="text-[10px] text-gray-600">
+                  Eje X (Contagio) vs. Eje Y (Incertidumbre)
+                </div>
+
+                {/* Matriz 5x5 X × Y */}
+                <div className="border border-gray-300 rounded bg-white p-1.5">
+                  <div className="text-[8px] font-bold text-purple-700 text-center uppercase tracking-wider mb-0.5">
+                    ▲ Incertidumbre Y
+                  </div>
+                  <div className="space-y-0.5">
+                    {[5, 4, 3, 2, 1].map((yVal) => (
+                      <div key={`xy-y-${yVal}`} className="flex items-center gap-0.5">
+                        <span className="w-3 text-[9px] font-mono text-gray-500 text-right shrink-0">{yVal}</span>
+                        <div className="grid grid-cols-5 gap-0.5 flex-1">
+                          {[1, 2, 3, 4, 5].map((xVal) => {
+                            const isBlackSwan = xVal >= 4 && yVal >= 4;
+                            const isHigh = xVal >= 4 || yVal >= 4;
+                            const cellBg = isBlackSwan
+                              ? "bg-purple-100 border-purple-300 text-purple-900"
+                              : isHigh
+                              ? "bg-indigo-100/70 border-indigo-300 text-indigo-900"
+                              : "bg-gray-50 border-gray-200 text-gray-700";
+
+                            const matching = visibleRisks.filter((r: any) => {
+                              const rx = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.xRes : r.residualX);
+                              const ry = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.yRes : r.residualY);
+                              return rx === xVal && ry === yVal;
+                            });
+
+                            return (
+                              <div
+                                key={`cell-xy-${xVal}-${yVal}`}
+                                className={`h-7 rounded border flex flex-wrap gap-0.5 items-center justify-center p-0.5 overflow-hidden ${cellBg}`}
+                              >
+                                {matching.map((mr: any) => {
+                                  const isSel = activeRisk?.id === mr.id;
+                                  return (
+                                    <button
+                                      key={mr.id}
+                                      type="button"
+                                      onClick={() => setSelectedRiskId(mr.id)}
+                                      className={`text-[7.5px] px-1 py-0.2 rounded font-mono font-bold truncate max-w-full cursor-pointer ${
+                                        isSel
+                                          ? "bg-[#1F242B] text-[#C0D725] ring-1 ring-black"
+                                          : "bg-white/90 text-gray-900 hover:bg-black hover:text-white"
+                                      }`}
+                                      title={`${mr.code}: ${mr.title} (X=${xVal}, Y=${yVal})`}
+                                    >
+                                      {mr.code}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-0.5 mt-0.5 pl-3.5">
+                    {[1, 2, 3, 4, 5].map((xVal) => (
+                      <div key={`xy-x-${xVal}`} className="flex-1 text-center text-[9px] font-mono text-gray-500">
+                        {xVal}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[8px] font-bold text-blue-700 text-center uppercase tracking-wider mt-0.5">
+                    Contagio X ►
+                  </div>
                 </div>
               </div>
 
-              {/* Plano 3: Y vs Z (Incertidumbre vs Velocidad) */}
-              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-1.5">
+              {/* Cara 3: Plano Y × Z (Incertidumbre vs. Velocidad: Sorpresas Operativas) */}
+              <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900 text-[11px]">Plano Y × Z</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-semibold">
+                  <span className="font-bold text-gray-900 text-[11px]">Cara 3: Y × Z</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
                     Sorpresas Operativas
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-600">
-                  Incertidumbre ($Y$) vs. Velocidad ($Z$). Desafía la capacidad de respuesta humana.
-                </p>
-                <div className="text-[11px] font-mono text-gray-700 bg-white p-1.5 rounded border border-gray-200">
-                  {visibleRisks.filter((r: any) => r.residualY >= 3.8 && r.residualZ >= 3.8).length} vectores hiper-impredecibles
+                <div className="text-[10px] text-gray-600">
+                  Eje Y (Incertidumbre) vs. Eje Z (Velocidad)
+                </div>
+
+                {/* Matriz 5x5 Y × Z */}
+                <div className="border border-gray-300 rounded bg-white p-1.5">
+                  <div className="text-[8px] font-bold text-amber-700 text-center uppercase tracking-wider mb-0.5">
+                    ▲ Velocidad Z
+                  </div>
+                  <div className="space-y-0.5">
+                    {[5, 4, 3, 2, 1].map((zVal) => (
+                      <div key={`yz-z-${zVal}`} className="flex items-center gap-0.5">
+                        <span className="w-3 text-[9px] font-mono text-gray-500 text-right shrink-0">{zVal}</span>
+                        <div className="grid grid-cols-5 gap-0.5 flex-1">
+                          {[1, 2, 3, 4, 5].map((yVal) => {
+                            const isSurprise = yVal >= 4 && zVal >= 4;
+                            const isHigh = yVal >= 4 || zVal >= 4;
+                            const cellBg = isSurprise
+                              ? "bg-amber-100 border-amber-300 text-amber-900"
+                              : isHigh
+                              ? "bg-orange-100/70 border-orange-300 text-orange-900"
+                              : "bg-gray-50 border-gray-200 text-gray-700";
+
+                            const matching = visibleRisks.filter((r: any) => {
+                              const ry = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.yRes : r.residualY);
+                              const rz = Math.round(activeRisk?.id === r.id && liveMetrics ? liveMetrics.zRes : r.residualZ);
+                              return ry === yVal && rz === zVal;
+                            });
+
+                            return (
+                              <div
+                                key={`cell-yz-${yVal}-${zVal}`}
+                                className={`h-7 rounded border flex flex-wrap gap-0.5 items-center justify-center p-0.5 overflow-hidden ${cellBg}`}
+                              >
+                                {matching.map((mr: any) => {
+                                  const isSel = activeRisk?.id === mr.id;
+                                  return (
+                                    <button
+                                      key={mr.id}
+                                      type="button"
+                                      onClick={() => setSelectedRiskId(mr.id)}
+                                      className={`text-[7.5px] px-1 py-0.2 rounded font-mono font-bold truncate max-w-full cursor-pointer ${
+                                        isSel
+                                          ? "bg-[#1F242B] text-[#C0D725] ring-1 ring-black"
+                                          : "bg-white/90 text-gray-900 hover:bg-black hover:text-white"
+                                      }`}
+                                      title={`${mr.code}: ${mr.title} (Y=${yVal}, Z=${zVal})`}
+                                    >
+                                      {mr.code}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-0.5 mt-0.5 pl-3.5">
+                    {[1, 2, 3, 4, 5].map((yVal) => (
+                      <div key={`yz-y-${yVal}`} className="flex-1 text-center text-[9px] font-mono text-gray-500">
+                        {yVal}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[8px] font-bold text-purple-700 text-center uppercase tracking-wider mt-0.5">
+                    Incertidumbre Y ►
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Columna Derecha (5 cols): Inspector 3D del Riesgo Seleccionado & Simulador Python */}
         <div className="lg:col-span-5 space-y-4">
-          {activeRisk ? (
+          {activeRisk && liveMetrics ? (
             <div className="bg-white rounded-bx p-5 shadow-sm border border-gray-200 space-y-4">
               {/* Header del Inspector */}
               <div className="border-b border-gray-100 pb-3">
@@ -1024,14 +1527,16 @@ export function EmergingRisksCubeView({
                   </div>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                      activeRisk.cubeZoneResidual === "RED"
+                      liveMetrics.zoneRes === "RED"
                         ? "bg-rose-100 text-rose-800 border border-rose-200"
-                        : activeRisk.cubeZoneResidual === "ORANGE"
+                        : liveMetrics.zoneRes === "ORANGE"
                         ? "bg-amber-100 text-amber-800 border border-amber-200"
+                        : liveMetrics.zoneRes === "YELLOW"
+                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
                         : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                     }`}
                   >
-                    Zona 3D: {activeRisk.cubeZoneResidual}
+                    Zona 3D: {liveMetrics.zoneRes}
                   </span>
                 </div>
                 <h3 className="font-bold text-gray-900 text-sm leading-snug">
@@ -1050,9 +1555,9 @@ export function EmergingRisksCubeView({
                     <Eye className="w-3.5 h-3.5 text-[#3299A8]" />
                     Comparativa Paralela 2D vs. 3D
                   </span>
-                  {activeRisk.isBlindSpot2Dto3D ? (
+                  {liveMetrics.visibilityGapDelta >= 3.0 ? (
                     <span className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300">
-                      Punto Ciego Detectado
+                      Punto Ciego Detectado (Δ {liveMetrics.visibilityGapDelta})
                     </span>
                   ) : (
                     <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">
@@ -1065,7 +1570,7 @@ export function EmergingRisksCubeView({
                   <div className="p-2 bg-white rounded border border-gray-200">
                     <div className="text-[10px] text-gray-500 uppercase font-semibold">Matriz 2D (P × I)</div>
                     <div className="text-sm font-bold font-mono text-gray-800 mt-0.5">
-                      {activeRisk.matrix2D?.residualScore || "N/A"} / 25
+                      {liveMetrics.score2D} / 25
                     </div>
                     <div className="text-[10px] text-gray-500">
                       Zona {activeRisk.matrix2D?.residualZone || "YELLOW"}
@@ -1074,10 +1579,10 @@ export function EmergingRisksCubeView({
                   <div className="p-2 bg-white rounded border border-gray-200">
                     <div className="text-[10px] text-gray-500 uppercase font-semibold">Cubo 3D (X × Y × Z)</div>
                     <div className="text-sm font-bold font-mono text-rose-600 mt-0.5">
-                      {activeRisk.volumeResidual} / 125
+                      {liveMetrics.vRes} / 125
                     </div>
                     <div className="text-[10px] text-gray-500">
-                      Tensión: {activeRisk.tensorScore3D} / 100
+                      Tensión: {liveMetrics.tensorScore3D} / 100
                     </div>
                   </div>
                 </div>
@@ -1085,6 +1590,71 @@ export function EmergingRisksCubeView({
                 <p className="text-[11px] text-gray-600 italic leading-snug">
                   {activeRisk.parallelComparison?.blindSpotExplanation}
                 </p>
+              </div>
+
+              {/* Tarjeta de Desglose Matemático Formal en Vivo (Cero Mockups) */}
+              <div className="bg-[#1F242B] text-gray-200 rounded p-3 text-xs space-y-2.5 border border-gray-800 shadow-inner">
+                <div className="flex items-center justify-between border-b border-gray-700/80 pb-1.5">
+                  <span className="font-bold text-[#C0D725] text-[11px] flex items-center gap-1.5 font-mono">
+                    <Cpu className="w-3.5 h-3.5 text-[#C0D725]" />
+                    Ecuación Formal del Tensor 3D (En Vivo)
+                  </span>
+                  <span className="text-[10px] font-mono text-gray-400">
+                    Art. 88 CUB
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                  <div className="bg-[#101418] p-2 rounded border border-gray-700/50">
+                    <span className="text-gray-400 block text-[9px]">VOLUMEN CÚBICO (V):</span>
+                    <span className="text-white font-bold text-xs">
+                      {liveMetrics.vInh} → {liveMetrics.vRes} / 125
+                    </span>
+                    <span className="text-gray-400 block text-[9px] mt-0.5">
+                      0.45 · (V/125) = <strong className="text-sky-400">{liveMetrics.volNormalizedTerm}</strong>
+                    </span>
+                  </div>
+
+                  <div className="bg-[#101418] p-2 rounded border border-gray-700/50">
+                    <span className="text-gray-400 block text-[9px]">NORMA CUADRÁTICA (||R||_W²):</span>
+                    <span className="text-white font-bold text-xs">
+                      {liveMetrics.weightedQuadraticNorm}
+                    </span>
+                    <span className="text-gray-400 block text-[9px] mt-0.5">
+                      0.55 · Norm = <strong className="text-sky-400">{liveMetrics.quadWeightedTerm}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-[#101418] rounded border border-gray-700/50 flex items-center justify-between text-[10px] font-mono">
+                  <div>
+                    <span className="text-gray-400">Comb. Convexa: </span>
+                    <strong className="text-gray-200">{liveMetrics.convexCombination}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Sinergia OODA γ(X,Z): </span>
+                    <strong className={liveMetrics.synergyFactorGamma > 1.0 ? "text-rose-400 font-bold" : "text-emerald-400"}>
+                      {liveMetrics.synergyFactorGamma}x
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 text-center pt-1 font-mono">
+                  <div className="bg-[#161B22] p-1.5 rounded border border-gray-700/60">
+                    <div className="text-[9px] text-gray-400">Tensor T_3D</div>
+                    <div className="text-xs font-black text-rose-400 mt-0.5">{liveMetrics.tensorScore3D} / 100</div>
+                  </div>
+                  <div className="bg-[#161B22] p-1.5 rounded border border-gray-700/60">
+                    <div className="text-[9px] text-gray-400">Score Hom. S_eq</div>
+                    <div className="text-xs font-black text-[#C0D725] mt-0.5">{liveMetrics.equivalentScore25} / 25</div>
+                  </div>
+                  <div className="bg-[#161B22] p-1.5 rounded border border-gray-700/60">
+                    <div className="text-[9px] text-gray-400">Brecha Δ_vis</div>
+                    <div className={`text-xs font-black mt-0.5 ${liveMetrics.visibilityGapDelta > 3 ? "text-rose-400" : "text-emerald-400"}`}>
+                      {liveMetrics.visibilityGapDelta >= 0 ? "+" : ""}{liveMetrics.visibilityGapDelta}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Sliders Interactivos de Simulación con Motor Python */}
@@ -1099,111 +1669,211 @@ export function EmergingRisksCubeView({
                   </span>
                 </div>
 
-                {/* Slider Eje X (Contagio) */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-700">
-                    <span className="font-semibold text-blue-700">Eje X — Impacto Sistémico / Contagio:</span>
-                    <span className="font-mono font-bold">{simX} / 5</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    step="1"
-                    value={simX}
-                    onChange={(e) => setSimX(Number(e.target.value))}
-                    className="w-full accent-blue-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                  />
-                  <div className="text-[10px] text-gray-500 flex justify-between">
-                    <span>1: Aislado</span>
-                    <span>5: Sistémico / BCP</span>
-                  </div>
-                </div>
-
-                {/* Slider Eje Y (Incertidumbre) */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-700">
-                    <span className="font-semibold text-[#8EA01A]">Eje Y — Incertidumbre Epistémica:</span>
-                    <span className="font-mono font-bold">{simY} / 5</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    step="1"
-                    value={simY}
-                    onChange={(e) => setSimY(Number(e.target.value))}
-                    className="w-full accent-[#C0D725] h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                  />
-                  <div className="text-[10px] text-gray-500 flex justify-between">
-                    <span>1: Conocido</span>
-                    <span>5: Cisne Negro</span>
-                  </div>
-                </div>
-
-                {/* Slider Eje Z (Velocidad) */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-700">
-                    <span className="font-semibold text-amber-600">Eje Z — Velocidad de Materialización:</span>
-                    <span className="font-mono font-bold">{simZ} / 5</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    step="1"
-                    value={simZ}
-                    onChange={(e) => setSimZ(Number(e.target.value))}
-                    className="w-full accent-amber-500 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                  />
-                  <div className="text-[10px] text-gray-500 flex justify-between">
-                    <span>1: Lenta (&gt;6m)</span>
-                    <span>5: Instantánea (&lt;4h)</span>
-                  </div>
-                </div>
-
-                {/* Simulación de Defensas por Eje */}
-                <div className="bg-gray-50 p-2.5 rounded border border-gray-200 text-xs space-y-2">
-                  <span className="font-semibold text-gray-800 block text-[11px]">
-                    Defensas y Controles Vectoriales (Art. 88 CUB):
+                {/* Coordenadas Inherentes Brutas (X, Y, Z) */}
+                <div className="space-y-2 bg-gray-50/60 p-2.5 rounded border border-gray-200">
+                  <span className="font-bold text-gray-800 text-[11px] block">
+                    1. Coordenadas Inherentes Brutas (R_inh ∈ 1..5):
                   </span>
-                  <div className="grid grid-cols-3 gap-2">
+                  {/* Slider Eje X (Contagio) */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-700">
+                      <span className="font-semibold text-blue-700">Eje X — Impacto Sistémico / Contagio:</span>
+                      <span className="font-mono font-bold">{simX} / 5</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={simX}
+                      onChange={(e) => setSimX(Number(e.target.value))}
+                      className="w-full accent-blue-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                    />
+                    <div className="text-[10px] text-gray-500 flex justify-between">
+                      <span>1: Aislado</span>
+                      <span>5: Sistémico / BCP</span>
+                    </div>
+                  </div>
+
+                  {/* Slider Eje Y (Incertidumbre) */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-700">
+                      <span className="font-semibold text-[#8EA01A]">Eje Y — Incertidumbre Epistémica:</span>
+                      <span className="font-mono font-bold">{simY} / 5</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={simY}
+                      onChange={(e) => setSimY(Number(e.target.value))}
+                      className="w-full accent-[#C0D725] h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                    />
+                    <div className="text-[10px] text-gray-500 flex justify-between">
+                      <span>1: Conocido</span>
+                      <span>5: Cisne Negro</span>
+                    </div>
+                  </div>
+
+                  {/* Slider Eje Z (Velocidad) */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-700">
+                      <span className="font-semibold text-amber-600">Eje Z — Velocidad de Materialización:</span>
+                      <span className="font-mono font-bold">{simZ} / 5</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={simZ}
+                      onChange={(e) => setSimZ(Number(e.target.value))}
+                      className="w-full accent-amber-500 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                    />
+                    <div className="text-[10px] text-gray-500 flex justify-between">
+                      <span>1: Lenta (&gt;6m)</span>
+                      <span>5: Instantánea (&lt;4h)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sliders de Traslación Vectorial ΔR = (ΔX, ΔY, ΔZ) */}
+                <div className="space-y-2 bg-gray-50/60 p-2.5 rounded border border-gray-200">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-gray-800">
+                    <span>2. Mitigación Vectorial ΔR (Unidades de Eje 0.0 - 2.5):</span>
+                    <span className="font-mono text-gray-500 font-normal">Paso 0.1</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="text-[10px] text-gray-600 block">Aislamiento ΔX</span>
+                      <div className="flex justify-between text-[10px] text-gray-600 mb-1">
+                        <span className="font-bold text-blue-700">ΔX Aislamiento</span>
+                        <span className="font-mono font-bold">{simDeltaX}</span>
+                      </div>
                       <input
                         type="range"
-                        min="0"
-                        max="45"
-                        value={simDefX}
-                        onChange={(e) => setSimDefX(Number(e.target.value))}
-                        className="w-full accent-blue-600 h-1"
+                        min="0.0"
+                        max="2.5"
+                        step="0.1"
+                        value={simDeltaX}
+                        onChange={(e) => setSimDeltaX(Number(e.target.value))}
+                        className="w-full accent-blue-600 h-1 bg-gray-200 rounded cursor-pointer"
                       />
-                      <span className="text-[10px] font-mono text-gray-500">-{simDefX}%</span>
+                      <span className="text-[9px] font-mono text-gray-500 block text-center mt-0.5">
+                        X_res: {liveMetrics.xRes}
+                      </span>
                     </div>
+
                     <div>
-                      <span className="text-[10px] text-gray-600 block">Sensores ΔY</span>
+                      <div className="flex justify-between text-[10px] text-gray-600 mb-1">
+                        <span className="font-bold text-[#8EA01A]">ΔY Sensores</span>
+                        <span className="font-mono font-bold">{simDeltaY}</span>
+                      </div>
                       <input
                         type="range"
-                        min="0"
-                        max="40"
-                        value={simDefY}
-                        onChange={(e) => setSimDefY(Number(e.target.value))}
-                        className="w-full accent-[#8EA01A] h-1"
+                        min="0.0"
+                        max="2.5"
+                        step="0.1"
+                        value={simDeltaY}
+                        onChange={(e) => setSimDeltaY(Number(e.target.value))}
+                        className="w-full accent-[#8EA01A] h-1 bg-gray-200 rounded cursor-pointer"
                       />
-                      <span className="text-[10px] font-mono text-gray-500">-{simDefY}%</span>
+                      <span className="text-[9px] font-mono text-gray-500 block text-center mt-0.5">
+                        Y_res: {liveMetrics.yRes}
+                      </span>
                     </div>
+
                     <div>
-                      <span className="text-[10px] text-gray-600 block">Kill-Switch ΔZ</span>
+                      <div className="flex justify-between text-[10px] text-gray-600 mb-1">
+                        <span className="font-bold text-amber-600">ΔZ Kill-Switch</span>
+                        <span className="font-mono font-bold">{simDeltaZ}</span>
+                      </div>
                       <input
                         type="range"
-                        min="0"
-                        max="45"
-                        value={simDefZ}
-                        onChange={(e) => setSimDefZ(Number(e.target.value))}
-                        className="w-full accent-amber-600 h-1"
+                        min="0.0"
+                        max="2.5"
+                        step="0.1"
+                        value={simDeltaZ}
+                        onChange={(e) => setSimDeltaZ(Number(e.target.value))}
+                        className="w-full accent-amber-600 h-1 bg-gray-200 rounded cursor-pointer"
                       />
-                      <span className="text-[10px] font-mono text-gray-500">-{simDefZ}%</span>
+                      <span className="text-[9px] font-mono text-gray-500 block text-center mt-0.5">
+                        Z_res: {liveMetrics.zRes}
+                      </span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Regulaciones Art. 88 CUB y Falla de Velocidad */}
+                <div className="p-2.5 rounded bg-gray-50 border border-gray-200 space-y-2 text-xs">
+                  {/* Toggle No Formalizado (NF) */}
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-[11px] font-semibold text-gray-700">
+                      Simular Controles No Formalizados (NF - Art. 88 CUB):
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={simForceNF}
+                      onChange={(e) => setSimForceNF(e.target.checked)}
+                      className="rounded text-rose-600 focus:ring-rose-500"
+                    />
+                  </label>
+                  {simForceNF && (
+                    <div className="text-[10px] text-amber-800 bg-amber-50 p-1.5 rounded border border-amber-200">
+                      ⚠️ Art. 88 CUB: Eficacia degradada a ≤ 20% (absorción truncada a Δu ≤ 0.40 max por eje).
+                    </div>
+                  )}
+
+                  {/* Toggle Tiempo Real (ONLINE_REALTIME) */}
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-[11px] font-semibold text-gray-700">
+                      Control Automatizado en Tiempo Real (ONLINE_REALTIME):
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={simHasRealtime}
+                      onChange={(e) => setSimHasRealtime(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </label>
+                  {liveMetrics.zFailure && (
+                    <div className="text-[10px] text-rose-800 bg-rose-50 p-1.5 rounded border border-rose-200">
+                      🚨 Falla de Velocidad: Ante amenaza instantánea (Z ≥ 4), los controles manuales/periódicos tienen ΔZ = 0.0 efectivo. Se requiere Kill-Switch en tiempo real.
+                    </div>
+                  )}
+                </div>
+
+                {/* Botones de Vinculación Rápida de Controles Tipificados */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                    Vincular Controles Tipificados por Eje:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleAttachTypifiedControl("X")}
+                      className="px-2 py-1.5 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition-colors cursor-pointer"
+                      title="Vincular Aislamiento BCP para reducir Eje X"
+                    >
+                      + Aislamiento X
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAttachTypifiedControl("Y")}
+                      className="px-2 py-1.5 text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 transition-colors cursor-pointer"
+                      title="Vincular Sensor KRI para reducir Eje Y"
+                    >
+                      + Sensor KRI Y
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAttachTypifiedControl("Z")}
+                      className="px-2 py-1.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded hover:bg-amber-100 transition-colors cursor-pointer"
+                      title="Vincular Kill-Switch SOAR para reducir Eje Z"
+                    >
+                      + Kill-Switch Z
+                    </button>
                   </div>
                 </div>
 
@@ -1459,6 +2129,52 @@ export function EmergingRisksCubeView({
                       </option>
                     ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-1">Nodo del Diagrama (Flowchart):</label>
+                <select
+                  value={newProcessNodeId}
+                  onChange={(e) => setNewProcessNodeId(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded border border-gray-300 text-xs bg-white focus:ring-1 focus:ring-[#C0D725] outline-none"
+                >
+                  <option value="">-- Seleccionar Nodo del Diagrama (Opcional) --</option>
+                  {data?.processesWithNodes
+                    ?.find((p: any) => p.id === newProcessId)
+                    ?.flowNodes?.map((n: any) => (
+                      <option key={n.id} value={n.id}>
+                        {n.label} ({n.nodeId}) • {n.type}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Parámetros de Comparativa 2D (P × I) para Brecha de Visibilidad */}
+              <div className="grid grid-cols-2 gap-3 bg-cyan-50/50 p-2.5 rounded border border-cyan-200">
+                <div>
+                  <label className="block text-cyan-900 font-bold mb-1">Probabilidad Histórica 2D (P):</label>
+                  <select
+                    value={newP2D}
+                    onChange={(e) => setNewP2D(Number(e.target.value))}
+                    className="w-full px-2 py-1 rounded border border-gray-300 font-mono text-xs bg-white"
+                  >
+                    {[1, 2, 3, 4, 5].map((v) => (
+                      <option key={v} value={v}>P = {v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-cyan-900 font-bold mb-1">Impacto Operativo 2D (I):</label>
+                  <select
+                    value={newI2D}
+                    onChange={(e) => setNewI2D(Number(e.target.value))}
+                    className="w-full px-2 py-1 rounded border border-gray-300 font-mono text-xs bg-white"
+                  >
+                    {[1, 2, 3, 4, 5].map((v) => (
+                      <option key={v} value={v}>I = {v}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3 bg-gray-50 p-2.5 rounded border border-gray-200">

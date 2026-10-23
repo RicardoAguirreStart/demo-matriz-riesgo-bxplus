@@ -189,6 +189,12 @@ export interface EmergingRiskCalculated extends EmergingRiskInput {
   mitigationDeltaZ: number;
   volumeInherent: number;  // 1..125
   volumeResidual: number;  // 1..125
+  // Desglose matemático interno del Tensor 3D
+  volNormalizedTerm: number;
+  weightedQuadraticNorm: number;
+  quadWeightedTerm: number;
+  convexCombination: number;
+  synergyFactorGamma: number;
   tensorScore3D: number;   // 1..100
   tensorScore3DInherent: number;
   equivalentScore25: number; // 1..25
@@ -197,10 +203,16 @@ export interface EmergingRiskCalculated extends EmergingRiskInput {
   hasRealtimeControl: boolean;
   hasNFControlPenalty: boolean;
   isBlindSpot2Dto3D: boolean;
+  // Métricas 2D y Brecha de Visibilidad
+  score2D: number;
+  visibilityGapDelta: number;
   parallelComparison: {
     matrix2DZone: string;
     cube3DZone: string;
-    discrepancyType: "CONGRUENT" | "UNDERESTIMATED_IN_2D" | "OVERESTIMATED_IN_2D";
+    score2D: number;
+    equivalentScore3D: number;
+    visibilityGapDelta: number;
+    discrepancyType: string;
     blindSpotExplanation: string;
   };
 }
@@ -228,6 +240,7 @@ export interface CubeEngineResult {
     avgUncertaintyY: number;
     avgSpeedZ: number;
     avgResidualVolume: number;
+    avgVisibilityGapDelta?: number;
     totalEmergingPEA: number;
     totalEmergingPMA: number;
   };

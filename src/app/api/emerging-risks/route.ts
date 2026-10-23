@@ -285,25 +285,45 @@ export async function GET(request: Request) {
     }
 
     // 3. Consultar riesgos emergentes con sus relaciones en BD
-    const rawRisks = await prisma.riskEvent.findMany({
-      where,
-      include: {
-        process: {
-          include: { macroProcess: true },
-        },
-        processNode: true,
-        taxonomy: true,
-        controls: {
-          include: {
-            control: true,
+    const [rawRisks, processesWithNodesRaw] = await Promise.all([
+      prisma.riskEvent.findMany({
+        where,
+        include: {
+          process: {
+            include: { macroProcess: true },
+          },
+          processNode: true,
+          taxonomy: true,
+          controls: {
+            include: {
+              control: true,
+            },
+          },
+          actionPlans: {
+            include: { evidences: true },
           },
         },
-        actionPlans: {
-          include: { evidences: true },
+        orderBy: [{ process: { code: "asc" } }, { code: "asc" }],
+      }),
+      prisma.process.findMany({
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          macroProcess: { select: { id: true, code: true, name: true } },
+          flowNodes: {
+            select: {
+              id: true,
+              label: true,
+              nodeType: true,
+              description: true,
+            },
+            orderBy: { label: "asc" },
+          },
         },
-      },
-      orderBy: [{ process: { code: "asc" } }, { code: "asc" }],
-    });
+        orderBy: { code: "asc" },
+      }),
+    ]);
 
     // 4. Preparar payload para el motor de Cubo 3D
     const engineInputs: EmergingRiskInput[] = rawRisks.map((r) => {
@@ -313,6 +333,11 @@ export async function GET(request: Request) {
       let overrideX: number | undefined;
       let overrideY: number | undefined;
       let overrideZ: number | undefined;
+      let overrideDeltaX: number | undefined;
+      let overrideDeltaY: number | undefined;
+      let overrideDeltaZ: number | undefined;
+      let forceNF: boolean | undefined;
+      let simHasRealtimeControl: boolean | undefined;
 
       if (r.cyberAttackVector) {
         try {
@@ -320,6 +345,11 @@ export async function GET(request: Request) {
           if (parsed.overrideResidualX !== undefined) overrideX = Number(parsed.overrideResidualX);
           if (parsed.overrideResidualY !== undefined) overrideY = Number(parsed.overrideResidualY);
           if (parsed.overrideResidualZ !== undefined) overrideZ = Number(parsed.overrideResidualZ);
+          if (parsed.overrideDeltaX !== undefined) overrideDeltaX = Number(parsed.overrideDeltaX);
+          if (parsed.overrideDeltaY !== undefined) overrideDeltaY = Number(parsed.overrideDeltaY);
+          if (parsed.overrideDeltaZ !== undefined) overrideDeltaZ = Number(parsed.overrideDeltaZ);
+          if (parsed.forceNF !== undefined) forceNF = Boolean(parsed.forceNF);
+          if (parsed.simHasRealtimeControl !== undefined) simHasRealtimeControl = Boolean(parsed.simHasRealtimeControl);
         } catch {
           // not json
         }
@@ -355,6 +385,11 @@ export async function GET(request: Request) {
         overrideResidualX: overrideX,
         overrideResidualY: overrideY,
         overrideResidualZ: overrideZ,
+        overrideDeltaX,
+        overrideDeltaY,
+        overrideDeltaZ,
+        forceNF,
+        simHasRealtimeControl,
         controls: controlsList,
         matrix2D: {
           inherentProbability: r.inherentProbability,
@@ -401,6 +436,18 @@ export async function GET(request: Request) {
       categorySummary: engineResult.categorySummary,
       emergingRisks: enrichedRisks,
       officialCategories: Object.values(EMERGING_CATEGORIES),
+      processesWithNodes: processesWithNodesRaw.map((p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        macroProcess: p.macroProcess,
+        nodes: p.flowNodes.map((n) => ({
+          id: n.id,
+          label: n.label,
+          nodeType: n.nodeType,
+          description: n.description,
+        })),
+      })),
     });
   } catch (error: any) {
     console.error("Error in GET /api/emerging-risks:", error);
@@ -419,9 +466,18 @@ export async function POST(request: Request) {
         systemicImpactX,
         uncertaintyY,
         materializationSpeedZ,
+        overrideDeltaX,
+        overrideDeltaY,
+        overrideDeltaZ,
         overrideResidualX,
         overrideResidualY,
         overrideResidualZ,
+        forceNF,
+        simHasRealtimeControl,
+        inherentProbability,
+        inherentImpact,
+        residualProbability,
+        residualImpact,
         emergingCategoryCode,
       } = body;
 
@@ -452,19 +508,47 @@ export async function POST(request: Request) {
         x: systemicImpactX !== undefined ? Number(systemicImpactX) : currentMeta.x || 3,
         y: uncertaintyY !== undefined ? Number(uncertaintyY) : currentMeta.y || 3,
         z: materializationSpeedZ !== undefined ? Number(materializationSpeedZ) : currentMeta.z || 3,
+        overrideDeltaX: overrideDeltaX !== undefined ? Number(overrideDeltaX) : currentMeta.overrideDeltaX,
+        overrideDeltaY: overrideDeltaY !== undefined ? Number(overrideDeltaY) : currentMeta.overrideDeltaY,
+        overrideDeltaZ: overrideDeltaZ !== undefined ? Number(overrideDeltaZ) : currentMeta.overrideDeltaZ,
         overrideResidualX: overrideResidualX !== undefined ? Number(overrideResidualX) : currentMeta.overrideResidualX,
         overrideResidualY: overrideResidualY !== undefined ? Number(overrideResidualY) : currentMeta.overrideResidualY,
         overrideResidualZ: overrideResidualZ !== undefined ? Number(overrideResidualZ) : currentMeta.overrideResidualZ,
+        forceNF: forceNF !== undefined ? Boolean(forceNF) : currentMeta.forceNF,
+        simHasRealtimeControl: simHasRealtimeControl !== undefined ? Boolean(simHasRealtimeControl) : currentMeta.simHasRealtimeControl,
         isEmergingCubeModel: true,
         lastSimulatedAt: new Date().toISOString(),
       };
 
+      const dataToUpdate: any = {
+        isEmergingRisk: true,
+        cyberAttackVector: JSON.stringify(updatedMeta),
+      };
+
+      // Si se suministraron ajustes 2D, sincronizar formalmente en el modelo de base de datos
+      const pInh = inherentProbability !== undefined ? Number(inherentProbability) : existingRisk.inherentProbability;
+      const iInh = inherentImpact !== undefined ? Number(inherentImpact) : existingRisk.inherentImpact;
+      const pRes = residualProbability !== undefined ? Number(residualProbability) : existingRisk.residualProbability;
+      const iRes = residualImpact !== undefined ? Number(residualImpact) : existingRisk.residualImpact;
+
+      if (inherentProbability !== undefined) dataToUpdate.inherentProbability = pInh;
+      if (inherentImpact !== undefined) dataToUpdate.inherentImpact = iInh;
+      if (inherentProbability !== undefined || inherentImpact !== undefined) {
+        dataToUpdate.inherentScore = Math.round(pInh * iInh);
+        dataToUpdate.inherentZone = pInh * iInh >= 16 ? "RED" : pInh * iInh >= 10 ? "ORANGE" : "YELLOW";
+      }
+
+      if (residualProbability !== undefined) dataToUpdate.residualProbability = pRes;
+      if (residualImpact !== undefined) dataToUpdate.residualImpact = iRes;
+      if (residualProbability !== undefined || residualImpact !== undefined) {
+        const resScore = Number((pRes * iRes).toFixed(1));
+        dataToUpdate.residualScore = resScore;
+        dataToUpdate.residualZone = resScore >= 15 ? "RED" : resScore >= 8 ? "ORANGE" : resScore >= 4 ? "YELLOW" : "GREEN";
+      }
+
       const updatedRisk = await prisma.riskEvent.update({
         where: { id: riskId },
-        data: {
-          isEmergingRisk: true,
-          cyberAttackVector: JSON.stringify(updatedMeta),
-        },
+        data: dataToUpdate,
       });
 
       // Bitácora criptográfica SHA-256
@@ -483,12 +567,128 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Coordenadas del Cubo 3D actualizadas y persistidas exitosamente.",
+        message: "Parámetros del Cubo 3D y matriz 2D sincronizados exitosamente.",
         risk: updatedRisk,
       });
     }
 
-    // Acción 2: Crear un Nuevo Riesgo Emergente Tridimensional
+    // Acción 2: Alternar Formalización de Control bajo CNBV Art. 88 CUB
+    if (action === "TOGGLE_CONTROL_FORMALIZATION") {
+      const { controlId, isFormalized, hasValidEvidence } = body;
+      if (!controlId) {
+        return NextResponse.json({ success: false, error: "controlId requerido" }, { status: 400 });
+      }
+
+      const dataToUpdate: any = {};
+      if (isFormalized !== undefined) dataToUpdate.isFormalized = Boolean(isFormalized);
+      if (hasValidEvidence !== undefined) dataToUpdate.hasValidEvidence = Boolean(hasValidEvidence);
+
+      const ctrl = await prisma.control.update({
+        where: { id: controlId },
+        data: dataToUpdate,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Estado de formalización bajo Art. 88 CUB actualizado.",
+        control: ctrl,
+      });
+    }
+
+    // Acción 3: Vincular Control Tipificado por Eje (X: BCP/Aislamiento, Y: KRI/Intel, Z: Kill-Switch SOAR)
+    if (action === "ATTACH_TYPIFIED_CONTROL") {
+      const { riskId, axis } = body;
+      if (!riskId || !axis) {
+        return NextResponse.json({ success: false, error: "riskId y axis ('X', 'Y', 'Z') requeridos" }, { status: 400 });
+      }
+
+      const risk = await prisma.riskEvent.findUnique({
+        where: { id: riskId },
+        include: { process: true },
+      });
+      if (!risk) {
+        return NextResponse.json({ success: false, error: "Riesgo no encontrado" }, { status: 404 });
+      }
+
+      const defaultUser = await prisma.user.findFirst();
+      if (!defaultUser) {
+        return NextResponse.json({ success: false, error: "Usuario no disponible" }, { status: 500 });
+      }
+
+      const ctrlCode = `CTRL-${axis}-${risk.code}`;
+      let ctrlName = "";
+      let automation = "MANUAL";
+      let executionTiming = "DAILY_D1";
+      let nature = "PREVENTIVE";
+
+      if (axis === "X") {
+        ctrlName = "Control de Aislamiento BCP y Segmentación de Red";
+        automation = "SEMI_AUTOMATED";
+        executionTiming = "DAILY_D1";
+        nature = "PREVENTIVE";
+      } else if (axis === "Y") {
+        ctrlName = "Sensor KRI y Threat Intelligence Proactivo";
+        automation = "SEMI_AUTOMATED";
+        executionTiming = "ONLINE_REALTIME";
+        nature = "DETECTIVE";
+      } else {
+        ctrlName = "Kill-Switch Automático SOAR en Milisegundos";
+        automation = "AUTOMATED";
+        executionTiming = "ONLINE_REALTIME";
+        nature = "CORRECTIVE";
+      }
+
+      let control = await prisma.control.findFirst({
+        where: { code: ctrlCode },
+      });
+
+      if (!control) {
+        control = await prisma.control.create({
+          data: {
+            code: ctrlCode,
+            name: ctrlName,
+            description: `Control tipificado para absorción vectorial en Eje ${axis} del Cubo 3D.`,
+            nature,
+            automation,
+            executionTiming,
+            isFormalized: true,
+            hasValidEvidence: true,
+            coverageLevel: 4,
+            rawEffectiveness: 5,
+            adjustedEffectScore: 1.0,
+            ownerId: defaultUser.id,
+          },
+        });
+      }
+
+      const existingMap = await prisma.riskControlMap.findUnique({
+        where: {
+          riskEventId_controlId: {
+            riskEventId: riskId,
+            controlId: control.id,
+          },
+        },
+      });
+
+      if (!existingMap) {
+        await prisma.riskControlMap.create({
+          data: {
+            riskEventId: riskId,
+            controlId: control.id,
+            mitigatesProbWeight: axis === "Y" ? 0.8 : 0.2,
+            mitigatesImpWeight: axis === "X" ? 0.8 : 0.2,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Control tipificado Eje ${axis} vinculado exitosamente.`,
+        control,
+      });
+    }
+
+    // Acción 4: Crear un Nuevo Riesgo Emergente Tridimensional
     if (action === "CREATE_EMERGING_RISK") {
       const {
         code,
@@ -502,6 +702,8 @@ export async function POST(request: Request) {
         systemicImpactX = 4,
         uncertaintyY = 4,
         materializationSpeedZ = 4,
+        inherentProbability = 1,
+        inherentImpact = 4,
         taxonomyRiskType = "TECHNOLOGICAL",
       } = body;
 
@@ -533,6 +735,11 @@ export async function POST(request: Request) {
       const y = Math.max(1, Math.min(5, Number(uncertaintyY)));
       const z = Math.max(1, Math.min(5, Number(materializationSpeedZ)));
 
+      const p2D = Math.max(1, Math.min(5, Number(inherentProbability)));
+      const i2D = Math.max(1, Math.min(5, Number(inherentImpact)));
+      const score2D = Math.round(p2D * i2D);
+      const zone2D = score2D >= 16 ? "RED" : score2D >= 10 ? "ORANGE" : score2D >= 4 ? "YELLOW" : "GREEN";
+
       const meta = JSON.stringify({
         emergingCategory: emergingCategoryCode || "TECH_CONCENTRATION",
         x,
@@ -554,14 +761,14 @@ export async function POST(request: Request) {
           processId: proc.id,
           processNodeId: processNodeId || null,
           ownerId: defaultUser.id,
-          inherentProbability: Math.min(5, Math.max(1, Math.round(y))),
-          inherentImpact: Math.min(5, Math.max(1, Math.round(x))),
-          inherentScore: Math.round(x * y),
-          inherentZone: x * y >= 16 ? "RED" : x * y >= 10 ? "ORANGE" : "YELLOW",
-          residualProbability: Math.max(1.0, Number((y * 0.8).toFixed(1))),
-          residualImpact: Math.max(1.0, Number((x * 0.8).toFixed(1))),
-          residualScore: Number((x * y * 0.64).toFixed(1)),
-          residualZone: x * y * 0.64 >= 15 ? "RED" : "ORANGE",
+          inherentProbability: p2D,
+          inherentImpact: i2D,
+          inherentScore: score2D,
+          inherentZone: zone2D,
+          residualProbability: p2D,
+          residualImpact: i2D,
+          residualScore: score2D,
+          residualZone: zone2D,
           isEmergingRisk: true,
           cyberAttackVector: meta,
           status: "PUBLISHED",
@@ -575,7 +782,7 @@ export async function POST(request: Request) {
         entityName: "RiskEvent",
         entityId: newRisk.id,
         previousState: null,
-        newState: { code, title, emergingCategoryCode, x, y, z },
+        newState: { code, title, emergingCategoryCode, x, y, z, p2D, i2D, processNodeId },
       });
 
       return NextResponse.json({

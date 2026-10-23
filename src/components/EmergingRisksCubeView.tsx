@@ -600,26 +600,26 @@ export function EmergingRisksCubeView({
         {/* Columna Izquierda (7 cols): Cubo Isométrico 3D + Proyecciones Ortogonales */}
         <div className="lg:col-span-7 space-y-4">
           {/* Card del Cubo Isométrico 3D */}
-          <div className="bg-[#1F242B] text-white rounded-bx p-4 shadow-card border border-gray-700">
+          <div className="bg-white rounded-bx p-4 shadow-sm border border-gray-200">
             {/* Header del Canvas 3D */}
-            <div className="flex items-center justify-between border-b border-gray-700/80 pb-3 mb-3">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <Box className="w-4 h-4 text-[#C0D725]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-200">
+                <Box className="w-4 h-4 text-[#3299A8]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">
                   Lienzo Isométrico 3D ({cubeMode === "INHERENT" ? "Inherente" : "Residual"})
                 </h3>
               </div>
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-gray-400 text-[11px]">Ángulo:</span>
+                <span className="text-gray-500 text-[11px] font-medium">Ángulo:</span>
                 {(["ISO_FRONT", "ISO_LEFT", "ISO_RIGHT", "TOP_DOWN"] as AngleView[]).map((ang) => (
                   <button
                     key={ang}
                     type="button"
                     onClick={() => setViewAngle(ang)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
                       viewAngle === ang
-                        ? "bg-[#C0D725] text-[#1F242B] border-[#C0D725]"
-                        : "bg-[#292F38] text-gray-300 border-gray-600 hover:border-gray-500"
+                        ? "bg-[#1F242B] text-white border-[#1F242B]"
+                        : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
                     }`}
                   >
                     {ang === "ISO_FRONT" ? "Frontal" : ang === "ISO_LEFT" ? "Izq" : ang === "ISO_RIGHT" ? "Der" : "Cenital"}
@@ -628,17 +628,17 @@ export function EmergingRisksCubeView({
               </div>
             </div>
 
-            {/* Canvas SVG del Cubo 5x5x5 */}
-            <div className="relative w-full h-[400px] bg-[#14181D] rounded-md overflow-hidden flex items-center justify-center border border-gray-800">
+            {/* Canvas SVG del Cubo 5x5x5 con Fondo Blanco */}
+            <div className="relative w-full h-[400px] bg-white rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
               {/* Indicador en la parte superior derecha de la representación */}
-              <div className="absolute top-2.5 right-2.5 z-10 bg-[#1F242B]/95 backdrop-blur-xs px-2.5 py-1.5 rounded border border-gray-700 shadow-md flex items-center gap-2">
+              <div className="absolute top-2.5 right-2.5 z-10 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded border border-gray-200 shadow-sm flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-gray-200 leading-tight">
+                  <span className="text-[11px] font-bold text-gray-800 leading-tight">
                     Amenazas Hiper-Veloces (Z ≥ 4):{" "}
-                    <span className="text-rose-400 font-mono font-black">{highSpeedCount}</span>
+                    <span className="text-rose-600 font-mono font-black">{highSpeedCount}</span>
                   </span>
-                  <span className="text-[9px] text-gray-400 leading-tight">
+                  <span className="text-[9px] text-gray-500 leading-tight">
                     Onset &lt; 4h • Exige Kill-Switch en tiempo real
                   </span>
                 </div>
@@ -664,23 +664,23 @@ export function EmergingRisksCubeView({
                   const pY = project3D(1, 5.2, 1, viewAngle);
                   const pZ = project3D(1, 1, 5.2, viewAngle);
                   return (
-                    <g opacity="0.85">
+                    <g opacity="0.95">
                       {/* Eje X (Contagio) */}
-                      <line x1={o.x} y1={o.y} x2={pX.x} y2={pX.y} stroke="#3299A8" strokeWidth="2.5" strokeDasharray="3 3" />
-                      <text x={pX.x + 8} y={pX.y + 4} fill="#3299A8" fontSize="10" fontWeight="bold">Eje X (Contagio)</text>
+                      <line x1={o.x} y1={o.y} x2={pX.x} y2={pX.y} stroke="#0284C7" strokeWidth="2" strokeDasharray="3 3" />
+                      <text x={pX.x + 8} y={pX.y + 4} fill="#0369A1" fontSize="10" fontWeight="bold">Eje X (Contagio)</text>
 
                       {/* Eje Y (Incertidumbre) */}
-                      <line x1={o.x} y1={o.y} x2={pY.x} y2={pY.y} stroke="#C0D725" strokeWidth="2.5" strokeDasharray="3 3" />
-                      <text x={pY.x - 10} y={pY.y + 16} fill="#C0D725" fontSize="10" fontWeight="bold">Eje Y (Incertidumbre)</text>
+                      <line x1={o.x} y1={o.y} x2={pY.x} y2={pY.y} stroke="#4D7C0F" strokeWidth="2" strokeDasharray="3 3" />
+                      <text x={pY.x - 10} y={pY.y + 16} fill="#3F6212" fontSize="10" fontWeight="bold">Eje Y (Incertidumbre)</text>
 
                       {/* Eje Z (Velocidad) */}
-                      <line x1={o.x} y1={o.y} x2={pZ.x} y2={pZ.y} stroke="#F97316" strokeWidth="2.5" />
-                      <text x={pZ.x - 4} y={pZ.y - 8} fill="#F97316" fontSize="10" fontWeight="bold">Eje Z (Velocidad)</text>
+                      <line x1={o.x} y1={o.y} x2={pZ.x} y2={pZ.y} stroke="#EA580C" strokeWidth="2.5" />
+                      <text x={pZ.x - 4} y={pZ.y - 8} fill="#C2410C" fontSize="10" fontWeight="bold">Eje Z (Velocidad)</text>
                     </g>
                   );
                 })()}
 
-                {/* Vóxeles de la caja límite (Wireframe del Cubo) */}
+                {/* Vóxeles de la caja límite (Líneas Negras del Cubo) */}
                 {(() => {
                   const corners = [
                     project3D(1, 1, 1, viewAngle),
@@ -693,16 +693,51 @@ export function EmergingRisksCubeView({
                     project3D(1, 5, 5, viewAngle),
                   ];
                   return (
-                    <g stroke="#374151" strokeWidth="1" opacity="0.4" fill="none">
-                      {/* Base inferior */}
-                      <polygon points={`${corners[0].x},${corners[0].y} ${corners[1].x},${corners[1].y} ${corners[2].x},${corners[2].y} ${corners[3].x},${corners[3].y}`} />
-                      {/* Tapa superior */}
-                      <polygon points={`${corners[4].x},${corners[4].y} ${corners[5].x},${corners[5].y} ${corners[6].x},${corners[6].y} ${corners[7].x},${corners[7].y}`} />
-                      {/* Pilares verticales */}
-                      <line x1={corners[0].x} y1={corners[0].y} x2={corners[4].x} y2={corners[4].y} />
-                      <line x1={corners[1].x} y1={corners[1].y} x2={corners[5].x} y2={corners[5].y} />
-                      <line x1={corners[2].x} y1={corners[2].y} x2={corners[6].x} y2={corners[6].y} />
-                      <line x1={corners[3].x} y1={corners[3].y} x2={corners[7].x} y2={corners[7].y} />
+                    <g fill="none">
+                      {/* Retícula interna sutil del piso base (Z = 1) */}
+                      {[2, 3, 4].map((v) => {
+                        const lx1 = project3D(v, 1, 1, viewAngle);
+                        const lx2 = project3D(v, 5, 1, viewAngle);
+                        const ly1 = project3D(1, v, 1, viewAngle);
+                        const ly2 = project3D(5, v, 1, viewAngle);
+                        return (
+                          <g key={`base-grid-${v}`} stroke="#000000" strokeWidth="0.75" opacity="0.12">
+                            <line x1={lx1.x} y1={lx1.y} x2={lx2.x} y2={lx2.y} />
+                            <line x1={ly1.x} y1={ly1.y} x2={ly2.x} y2={ly2.y} />
+                          </g>
+                        );
+                      })}
+
+                      {/* Capas intermedias de velocidad (Z = 2, 3, 4) en líneas negras punteadas */}
+                      {[2, 3, 4].map((zLevel) => {
+                        const c0 = project3D(1, 1, zLevel, viewAngle);
+                        const c1 = project3D(5, 1, zLevel, viewAngle);
+                        const c2 = project3D(5, 5, zLevel, viewAngle);
+                        const c3 = project3D(1, 5, zLevel, viewAngle);
+                        return (
+                          <polygon
+                            key={`layer-z-${zLevel}`}
+                            points={`${c0.x},${c0.y} ${c1.x},${c1.y} ${c2.x},${c2.y} ${c3.x},${c3.y}`}
+                            stroke="#000000"
+                            strokeWidth="0.75"
+                            strokeDasharray="2 3"
+                            opacity="0.22"
+                          />
+                        );
+                      })}
+
+                      {/* Estructura Principal del Cubo: Aristas y Pilares en Negro Sólido */}
+                      <g stroke="#000000" strokeWidth="1.75" opacity="0.95">
+                        {/* Base inferior (Z = 1) */}
+                        <polygon points={`${corners[0].x},${corners[0].y} ${corners[1].x},${corners[1].y} ${corners[2].x},${corners[2].y} ${corners[3].x},${corners[3].y}`} />
+                        {/* Tapa superior (Z = 5) */}
+                        <polygon points={`${corners[4].x},${corners[4].y} ${corners[5].x},${corners[5].y} ${corners[6].x},${corners[6].y} ${corners[7].x},${corners[7].y}`} />
+                        {/* Pilares verticales */}
+                        <line x1={corners[0].x} y1={corners[0].y} x2={corners[4].x} y2={corners[4].y} />
+                        <line x1={corners[1].x} y1={corners[1].y} x2={corners[5].x} y2={corners[5].y} />
+                        <line x1={corners[2].x} y1={corners[2].y} x2={corners[6].x} y2={corners[6].y} />
+                        <line x1={corners[3].x} y1={corners[3].y} x2={corners[7].x} y2={corners[7].y} />
+                      </g>
                     </g>
                   );
                 })()}
@@ -721,20 +756,20 @@ export function EmergingRisksCubeView({
                         y1={pInh.y}
                         x2={pRes.x}
                         y2={pRes.y}
-                        stroke="#6B7280"
-                        strokeWidth={isSelected ? "2" : "1"}
-                        strokeDasharray="2 2"
-                        opacity={isSelected ? "0.9" : "0.4"}
+                        stroke="#4B5563"
+                        strokeWidth={isSelected ? "2" : "1.2"}
+                        strokeDasharray="3 2"
+                        opacity={isSelected ? "0.9" : "0.5"}
                       />
                       {/* Punto fantasma Inherente */}
                       <circle
                         cx={pInh.x}
                         cy={pInh.y}
                         r="3"
-                        fill="none"
-                        stroke="#9CA3AF"
-                        strokeWidth="1"
-                        opacity="0.6"
+                        fill="#F3F4F6"
+                        stroke="#4B5563"
+                        strokeWidth="1.2"
+                        opacity="0.8"
                       />
                     </g>
                   );
@@ -765,7 +800,7 @@ export function EmergingRisksCubeView({
                           cy={p.y}
                           r="11"
                           fill="none"
-                          stroke="#C0D725"
+                          stroke="#1F242B"
                           strokeWidth="2.5"
                           strokeDasharray="4 2"
                         />
@@ -777,19 +812,19 @@ export function EmergingRisksCubeView({
                         cy={p.y}
                         r={isSelected ? "7" : "5.5"}
                         fill={color}
-                        stroke={isHighSpeed ? "#EF4444" : "#1F242B"}
+                        stroke={isHighSpeed ? "#EF4444" : "#111827"}
                         strokeWidth={isHighSpeed ? "2" : "1.5"}
                       />
 
-                      {/* Etiqueta de código */}
+                      {/* Etiqueta de código en tipografía oscura y legible */}
                       <text
                         x={p.x + 9}
                         y={p.y + 3.5}
-                        fill={isSelected ? "#C0D725" : "#E5E7EB"}
-                        fontSize={isSelected ? "11" : "9"}
-                        fontWeight={isSelected ? "bold" : "600"}
+                        fill={isSelected ? "#0F766E" : "#111827"}
+                        fontSize={isSelected ? "11" : "9.5"}
+                        fontWeight={isSelected ? "bold" : "700"}
                         fontFamily="monospace"
-                        className="pointer-events-none drop-shadow-md"
+                        className="pointer-events-none select-none"
                       >
                         {r.code}
                       </text>
@@ -798,18 +833,18 @@ export function EmergingRisksCubeView({
                 })}
               </svg>
 
-              {/* Leyenda flotante en la esquina del canvas */}
-              <div className="absolute bottom-2 left-2 bg-[#1F242B]/90 backdrop-blur-xs p-2 rounded text-[10px] text-gray-300 border border-gray-700 flex items-center gap-3">
-                <span className="flex items-center gap-1">
+              {/* Leyenda flotante en la esquina del canvas con Fondo Blanco */}
+              <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-xs p-2 rounded text-[10px] text-gray-700 border border-gray-200 shadow-sm flex items-center gap-3">
+                <span className="flex items-center gap-1 font-medium">
                   <span className="w-2 h-2 rounded-full bg-rose-500" /> Rojo (V ≥ 64)
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 font-medium">
                   <span className="w-2 h-2 rounded-full bg-amber-500" /> Naranja (36 ≤ V &lt; 64)
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 font-medium">
                   <span className="w-2 h-2 rounded-full bg-yellow-500" /> Amarillo
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 font-medium">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Verde
                 </span>
               </div>

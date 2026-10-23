@@ -174,6 +174,15 @@ export function EmergingRisksCubeView({
     });
   }, [data?.emergingRisks, speedLayerZ, cubeMode]);
 
+  // Conteo de riesgos de velocidad inmediata en la vista actual
+  const highSpeedCount = useMemo(() => {
+    if (!visibleRisks) return 0;
+    return visibleRisks.filter((r: any) => {
+      const z = cubeMode === "INHERENT" ? r.materializationSpeedZ : r.residualZ;
+      return z >= 3.8;
+    }).length;
+  }, [visibleRisks, cubeMode]);
+
   // Guardar simulación en vivo con el Motor Python
   const handleSaveSimulation = async () => {
     if (!activeRisk) return;
@@ -621,6 +630,20 @@ export function EmergingRisksCubeView({
 
             {/* Canvas SVG del Cubo 5x5x5 */}
             <div className="relative w-full h-[400px] bg-[#14181D] rounded-md overflow-hidden flex items-center justify-center border border-gray-800">
+              {/* Indicador en la parte superior derecha de la representación */}
+              <div className="absolute top-2.5 right-2.5 z-10 bg-[#1F242B]/95 backdrop-blur-xs px-2.5 py-1.5 rounded border border-gray-700 shadow-md flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-gray-200 leading-tight">
+                    Amenazas Hiper-Veloces (Z ≥ 4):{" "}
+                    <span className="text-rose-400 font-mono font-black">{highSpeedCount}</span>
+                  </span>
+                  <span className="text-[9px] text-gray-400 leading-tight">
+                    Onset &lt; 4h • Exige Kill-Switch en tiempo real
+                  </span>
+                </div>
+              </div>
+
               <svg viewBox="0 0 520 440" className="w-full h-full select-none">
                 {/* Cuadrícula base isométrica */}
                 <defs>
@@ -735,19 +758,7 @@ export function EmergingRisksCubeView({
                       className="cursor-pointer transition-transform duration-150"
                       onClick={() => setSelectedRiskId(r.id)}
                     >
-                      {/* Halo de pulso para riesgos de velocidad instantánea Z >= 4 */}
-                      {isHighSpeed && (
-                        <circle
-                          cx={p.x}
-                          cy={p.y}
-                          r={isSelected ? "18" : "12"}
-                          fill={zone === "RED" ? "url(#nodeGlowRed)" : "url(#nodeGlowYellow)"}
-                          className="animate-ping"
-                          opacity="0.6"
-                        />
-                      )}
-
-                      {/* Anillo de selección */}
+                      {/* Anillo de selección al hacer clic */}
                       {isSelected && (
                         <circle
                           cx={p.x}
@@ -760,14 +771,14 @@ export function EmergingRisksCubeView({
                         />
                       )}
 
-                      {/* Nodo principal */}
+                      {/* Nodo principal (estático, sin animaciones ni parpadeos) */}
                       <circle
                         cx={p.x}
                         cy={p.y}
                         r={isSelected ? "7" : "5.5"}
                         fill={color}
-                        stroke="#1F242B"
-                        strokeWidth="1.5"
+                        stroke={isHighSpeed ? "#EF4444" : "#1F242B"}
+                        strokeWidth={isHighSpeed ? "2" : "1.5"}
                       />
 
                       {/* Etiqueta de código */}

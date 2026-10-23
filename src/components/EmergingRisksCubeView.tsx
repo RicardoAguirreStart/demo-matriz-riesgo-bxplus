@@ -473,18 +473,9 @@ export function EmergingRisksCubeView({
       <div className="bg-gradient-to-r from-[#1F242B] via-[#242C35] to-[#2B333E] text-white rounded-bx p-5 shadow-card border-l-4 border-[#C0D725] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-xl font-bold font-serif text-white tracking-tight flex items-center gap-2">
-              <Box className="w-5 h-5 text-[#C0D725]" />
+            <h2 className="text-xl font-bold font-serif text-white tracking-tight">
               Matriz Cúbica de Riesgos Emergentes (5×5×5)
             </h2>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#101418] text-[#C0D725] font-mono border border-[#C0D725]/40 flex items-center gap-1.5 shadow-xs">
-              <Cpu className="w-3 h-3 text-[#C0D725] animate-pulse" />
-              {data?.engineTelemetry?.engine || "Python 3D Cube Engine"} •{" "}
-              {data?.engineTelemetry?.executionTimeMs || 0}ms
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-gray-700/60 text-gray-300 font-mono">
-              125 Vóxeles (X·Y·Z)
-            </span>
           </div>
           <p className="text-xs text-gray-300 max-w-3xl leading-relaxed">
             Modelo cuantitativo en 3 dimensiones ortogonales:{" "}
@@ -504,7 +495,7 @@ export function EmergingRisksCubeView({
             className="px-3.5 py-2 text-xs font-bold bg-[#C0D725] hover:bg-[#b0c520] text-[#1F242B] rounded-md shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Nuevo Riesgo Emergente 3D</span>
+            <span>Nuevo Riesgo Emergente 3D</span>
           </button>
         </div>
       </div>

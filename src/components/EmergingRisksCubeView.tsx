@@ -645,8 +645,28 @@ export function EmergingRisksCubeView({
               </div>
 
               <svg viewBox="0 0 520 440" className="w-full h-full select-none">
-                {/* Cuadrícula base isométrica */}
+                {/* Cuadrícula base y patrones del fondo */}
                 <defs>
+                  {/* Cuadrícula técnica de ingeniería en el fondo */}
+                  <pattern id="canvasBgGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E5E7EB" strokeWidth="0.75" />
+                  </pattern>
+                  <pattern id="canvasBgGridMajor" width="100" height="100" patternUnits="userSpaceOnUse">
+                    <rect width="100" height="100" fill="url(#canvasBgGrid)" />
+                    <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#D1D5DB" strokeWidth="1.25" />
+                  </pattern>
+
+                  {/* Puntas de flecha sólidas y de alto contraste para los 3 ejes */}
+                  <marker id="arrowAxisX" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0284C7" />
+                  </marker>
+                  <marker id="arrowAxisY" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#16A34A" />
+                  </marker>
+                  <marker id="arrowAxisZ" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#EA580C" />
+                  </marker>
+
                   <radialGradient id="nodeGlowRed" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stopColor="#EF4444" stopOpacity="0.8" />
                     <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
@@ -657,25 +677,97 @@ export function EmergingRisksCubeView({
                   </radialGradient>
                 </defs>
 
-                {/* Ejes tridimensionales de referencia */}
+                {/* Fondo con Cuadrícula Técnica en Papel Blanco */}
+                <rect x="0" y="0" width="520" height="440" fill="url(#canvasBgGridMajor)" />
+
+                {/* Ejes tridimensionales de referencia con Colores Resaltados */}
                 {(() => {
                   const o = project3D(1, 1, 1, viewAngle);
-                  const pX = project3D(5.2, 1, 1, viewAngle);
-                  const pY = project3D(1, 5.2, 1, viewAngle);
-                  const pZ = project3D(1, 1, 5.2, viewAngle);
+                  const pX = project3D(5.35, 1, 1, viewAngle);
+                  const pY = project3D(1, 5.35, 1, viewAngle);
+                  const pZ = project3D(1, 1, 5.35, viewAngle);
                   return (
-                    <g opacity="0.95">
-                      {/* Eje X (Contagio) */}
-                      <line x1={o.x} y1={o.y} x2={pX.x} y2={pX.y} stroke="#0284C7" strokeWidth="2" strokeDasharray="3 3" />
-                      <text x={pX.x + 8} y={pX.y + 4} fill="#0369A1" fontSize="10" fontWeight="bold">Eje X (Contagio)</text>
+                    <g>
+                      {/* Eje X (Impacto Sistémico / Contagio) - Azul Eléctrico Vibrante */}
+                      <line
+                        x1={o.x}
+                        y1={o.y}
+                        x2={pX.x}
+                        y2={pX.y}
+                        stroke="#0284C7"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        markerEnd="url(#arrowAxisX)"
+                      />
+                      {[1, 2, 3, 4, 5].map((val) => {
+                        const pt = project3D(val, 1, 1, viewAngle);
+                        return (
+                          <g key={`tick-x-${val}`}>
+                            <circle cx={pt.x} cy={pt.y} r="2.5" fill="#0284C7" />
+                            <text x={pt.x} y={pt.y + 11} fill="#0369A1" fontSize="8" fontWeight="bold" textAnchor="middle">{val}</text>
+                          </g>
+                        );
+                      })}
+                      <g transform={`translate(${pX.x + 8}, ${pX.y - 10})`}>
+                        <rect x="0" y="0" width="96" height="20" rx="4" fill="#0284C7" />
+                        <text x="48" y="14" fill="#FFFFFF" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                          Eje X • Contagio
+                        </text>
+                      </g>
 
-                      {/* Eje Y (Incertidumbre) */}
-                      <line x1={o.x} y1={o.y} x2={pY.x} y2={pY.y} stroke="#4D7C0F" strokeWidth="2" strokeDasharray="3 3" />
-                      <text x={pY.x - 10} y={pY.y + 16} fill="#3F6212" fontSize="10" fontWeight="bold">Eje Y (Incertidumbre)</text>
+                      {/* Eje Y (Incertidumbre Epistémica) - Verde Esmeralda Vibrante */}
+                      <line
+                        x1={o.x}
+                        y1={o.y}
+                        x2={pY.x}
+                        y2={pY.y}
+                        stroke="#16A34A"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        markerEnd="url(#arrowAxisY)"
+                      />
+                      {[1, 2, 3, 4, 5].map((val) => {
+                        const pt = project3D(1, val, 1, viewAngle);
+                        return (
+                          <g key={`tick-y-${val}`}>
+                            <circle cx={pt.x} cy={pt.y} r="2.5" fill="#16A34A" />
+                            <text x={pt.x - 9} y={pt.y + 3} fill="#15803D" fontSize="8" fontWeight="bold" textAnchor="end">{val}</text>
+                          </g>
+                        );
+                      })}
+                      <g transform={`translate(${pY.x - 130}, ${pY.y + 4})`}>
+                        <rect x="0" y="0" width="124" height="20" rx="4" fill="#16A34A" />
+                        <text x="62" y="14" fill="#FFFFFF" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                          Eje Y • Incertidumbre
+                        </text>
+                      </g>
 
-                      {/* Eje Z (Velocidad) */}
-                      <line x1={o.x} y1={o.y} x2={pZ.x} y2={pZ.y} stroke="#EA580C" strokeWidth="2.5" />
-                      <text x={pZ.x - 4} y={pZ.y - 8} fill="#C2410C" fontSize="10" fontWeight="bold">Eje Z (Velocidad)</text>
+                      {/* Eje Z (Velocidad de Materialización) - Naranja Rojizo Vibrante */}
+                      <line
+                        x1={o.x}
+                        y1={o.y}
+                        x2={pZ.x}
+                        y2={pZ.y}
+                        stroke="#EA580C"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        markerEnd="url(#arrowAxisZ)"
+                      />
+                      {[1, 2, 3, 4, 5].map((val) => {
+                        const pt = project3D(1, 1, val, viewAngle);
+                        return (
+                          <g key={`tick-z-${val}`}>
+                            <circle cx={pt.x} cy={pt.y} r="2.5" fill="#EA580C" />
+                            <text x={pt.x - 9} y={pt.y + 3} fill="#C2410C" fontSize="8" fontWeight="bold" textAnchor="end">{val}</text>
+                          </g>
+                        );
+                      })}
+                      <g transform={`translate(${pZ.x - 53}, ${pZ.y - 26})`}>
+                        <rect x="0" y="0" width="106" height="20" rx="4" fill="#EA580C" />
+                        <text x="53" y="14" fill="#FFFFFF" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                          Eje Z • Velocidad
+                        </text>
+                      </g>
                     </g>
                   );
                 })()}

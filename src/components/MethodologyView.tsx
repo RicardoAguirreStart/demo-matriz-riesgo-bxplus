@@ -38,6 +38,8 @@ import {
   Clock,
   Target,
   ShieldCheck,
+  Box,
+  Eye,
 } from "lucide-react";
 
 interface MethodologyViewProps {
@@ -46,7 +48,7 @@ interface MethodologyViewProps {
 
 export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<
-    "UNIVERSE" | "RAF_FRAMEWORK" | "PILLARS" | "FORMULAS" | "GOVERNANCE" | "SANDBOX"
+    "UNIVERSE" | "RAF_FRAMEWORK" | "EMERGING_CUBE" | "PILLARS" | "FORMULAS" | "GOVERNANCE" | "SANDBOX"
   >("UNIVERSE");
   const [selectedBlock, setSelectedBlock] = useState<"ALL" | "BLOCK_1" | "BLOCK_2" | "BLOCK_3">("ALL");
   const [conceptSearch, setConceptSearch] = useState("");
@@ -393,6 +395,18 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
         </button>
 
         <button
+          onClick={() => setActiveSubTab("EMERGING_CUBE")}
+          className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === "EMERGING_CUBE"
+              ? "bg-[#1F242B] text-white shadow-sm ring-1 ring-[#3299A8]"
+              : "bg-white text-gray-700 hover:bg-cyan-50 border border-gray-200 font-bold"
+          }`}
+        >
+          <Box className="w-3.5 h-3.5 text-[#3299A8]" />
+          <span>3. Cubo 3D Riesgos Emergentes (5×5×5)</span>
+        </button>
+
+        <button
           onClick={() => setActiveSubTab("PILLARS")}
           className={`px-3.5 py-2 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
             activeSubTab === "PILLARS"
@@ -401,7 +415,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
           }`}
         >
           <Shield className="w-3.5 h-3.5 text-[#3299A8]" />
-          <span>3. Metodología Híbrida (5 Pilares)</span>
+          <span>4. Metodología Híbrida (5 Pilares)</span>
         </button>
 
         <button
@@ -413,7 +427,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
           }`}
         >
           <Binary className="w-3.5 h-3.5 text-amber-500" />
-          <span>4. Formulario Matemático Auditable</span>
+          <span>5. Formulario Matemático Auditable</span>
         </button>
 
         <button
@@ -425,7 +439,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
           }`}
         >
           <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
-          <span>5. Ciclo de Vida & Gobernanza 3LD</span>
+          <span>6. Ciclo de Vida & Gobernanza 3LD</span>
         </button>
 
         <button
@@ -437,7 +451,7 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
           }`}
         >
           <Sliders className="w-3.5 h-3.5 text-[#1F242B]" />
-          <span>6. Calculadora en Vivo (Sandbox)</span>
+          <span>7. Calculadora en Vivo (Sandbox)</span>
         </button>
       </div>
 
@@ -1057,7 +1071,436 @@ export function MethodologyView({ onNavigateTab }: MethodologyViewProps) {
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-SECCIÓN 3: LOS 5 PILARES DE LA METODOLOGÍA HÍBRIDA */}
+      {/* SUB-SECCIÓN 3: CUBO 3D DE RIESGOS EMERGENTES (5x5x5) & MOTOR PYTHON */}
+      {/* ========================================================================= */}
+      {activeSubTab === "EMERGING_CUBE" && (
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* Banner de Presentación y Justificación Estratégica */}
+          <div className="bg-gradient-to-r from-[#1F242B] via-[#2A313C] to-[#1F242B] rounded-bx p-5 text-white shadow-md border border-gray-700">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="space-y-2 max-w-3xl">
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#3299A8] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded tracking-wider">
+                    Innovación Metodológica B×+
+                  </span>
+                  <span className="bg-white/10 text-gray-200 text-[10px] font-mono px-2 py-0.5 rounded">
+                    🐍 Motor Python 3D • 125 Vóxeles
+                  </span>
+                  <span className="bg-[#C0D725]/20 text-[#C0D725] text-[10px] font-bold px-2 py-0.5 rounded border border-[#C0D725]/30">
+                    CNBV CUB Art. 88 & Basilea III
+                  </span>
+                </div>
+                <h3 className="text-xl font-serif font-bold text-white tracking-tight">
+                  Matriz Cúbica Tridimensional (5×5×5): Gestión Paralela para Riesgos Emergentes y Sistémicos
+                </h3>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  Superación del sesgo frecuentista tradicional mediante la evaluación simultánea de 
+                  <strong className="text-white"> Impacto Sistémico / Contagio (Eje X)</strong>, 
+                  <strong className="text-white"> Incertidumbre Epistémica (Eje Y)</strong> y 
+                  <strong className="text-white"> Velocidad de Materialización / Time-to-Impact (Eje Z)</strong>, 
+                  garantizando que amenazas relámpago o cisnes negros no queden ocultos en zonas verdes o amarillas de la matriz 2D.
+                </p>
+              </div>
+
+              <div className="shrink-0 flex flex-col sm:flex-row items-stretch lg:items-center gap-2.5">
+                <button
+                  onClick={() => onNavigateTab("emerging-cube")}
+                  className="bg-[#C0D725] hover:bg-[#a8bd1e] text-[#1F242B] font-bold text-xs py-2.5 px-4 rounded-bx shadow-sm flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02]"
+                >
+                  <Box className="w-4 h-4 text-[#1F242B]" />
+                  <span>Ir a Matriz Cúbica 3D en Vivo</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloque 1: Justificación - Por qué un Cubo 3D vs. la Matriz 2D Tradicional */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Scale className="w-5 h-5 text-[#3299A8]" />
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                1. Justificación Normativa y Estratégica: ¿Por qué un Cubo 3D en Paralelo?
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="bg-rose-50/60 border border-rose-200 rounded p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-rose-800 font-bold">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>Puntos Ciegos Críticos de la Matriz 2D Tradicional (P × I)</span>
+                </div>
+                <ul className="space-y-1.5 text-gray-700 list-disc list-inside">
+                  <li>
+                    <strong className="text-gray-900">Sesgo Frecuentista de Baja Probabilidad:</strong> Amenazas sin precedentes históricos recientes (ej. ataque de ransomware con IA o corrida digital de liquidez) se catalogan como <em>P = 1 o 2</em>, clasificándose erróneamente en zona Verde o Amarilla.
+                  </li>
+                  <li>
+                    <strong className="text-gray-900">Invisibilidad del Tiempo de Reacción (Time-to-Impact):</strong> Trata con la misma severidad un evento que tarda 6 meses en materializarse que uno que colapsa operaciones en 15 minutos, donde los comités ordinarios no alcanzan a sesionar.
+                  </li>
+                  <li>
+                    <strong className="text-gray-900">Ignorancia del Contagio Sistémico:</strong> No mide el efecto dominó que una falla en un conector crítico (ej. SPEI) genera sobre la solvencia (ICAP) o la reputación institucional.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>Solución Institucional B×+: Modelo de Gestión Paralela</span>
+                </div>
+                <ul className="space-y-1.5 text-gray-700 list-disc list-inside">
+                  <li>
+                    <strong className="text-gray-900">Matriz Operativa 2D (5×5 CNBV):</strong> Gobierna el riesgo operativo recurrente y predecible bajo el marco de pérdida esperada (PEA) y máxima (PMA).
+                  </li>
+                  <li>
+                    <strong className="text-gray-900">Cubo Tridimensional 3D (5×5×5):</strong> Monitorea en paralelo la no-linealidad, el contagio sistémico y la velocidad relámpago con un motor determinista en Python.
+                  </li>
+                  <li>
+                    <strong className="text-gray-900">Alerta de Puntos Ciegos (2D → 3D):</strong> Identifica automáticamente cuando un riesgo subestimado en 2D exige activación de protocolos y planes de acción preventivos de 3LD.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloque 2: Los Tres Ejes del Cubo 3D y sus Escalas Normativas 1 a 5 */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Layers className="w-5 h-5 text-[#C0D725]" />
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                2. Los Tres Ejes Ortogonales del Cubo (X, Y, Z ∈ 1..5)
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Eje X */}
+              <div className="border border-blue-200 rounded p-3.5 bg-blue-50/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
+                    Eje X • Impacto Sistémico
+                  </span>
+                  <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                    Contagio (1..5)
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-600 leading-snug">
+                  Mide la severidad financiera/reputacional y el <strong>efecto dominó</strong> hacia otros procesos bancarios, líneas de negocio o el sistema financiero nacional.
+                </p>
+                <div className="space-y-1 pt-1 text-[11px]">
+                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">1. Aislado / Local:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">&lt; 0.25% Cap. Neto</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">2. Acotado a Proceso:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">0.25% – 0.75% Cap.</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">3. Inter-Procesos:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">0.75% – 2.0% Cap.</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">4. Transversal B×+:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">2.0% – 5.0% Cap.</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-blue-100 flex justify-between items-center">
+                    <span className="font-bold text-rose-700">5. Sistémico / BCP:</span>
+                    <span className="text-rose-600 font-mono font-bold text-[10px]">&gt; 5.0% Cap. Neto</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Eje Y */}
+              <div className="border border-purple-200 rounded p-3.5 bg-purple-50/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-purple-900 tracking-wider">
+                    Eje Y • Incertidumbre
+                  </span>
+                  <span className="bg-purple-100 text-purple-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                    Epistémica (1..5)
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-600 leading-snug">
+                  Reemplaza la probabilidad clásica. Evalúa el <strong>grado de desconocimiento, falta de datos históricos y dinamismo no lineal</strong> del vector de amenaza.
+                </p>
+                <div className="space-y-1 pt-1 text-[11px]">
+                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">1. Conocido / Predecible:</span>
+                    <span className="text-gray-500 text-[10px]">Series robustas</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">2. Incertidumbre Baja:</span>
+                    <span className="text-gray-500 text-[10px]">Documentado sector</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">3. Moderada:</span>
+                    <span className="text-gray-500 text-[10px]">Datos preliminares</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">4. Alta Ambigüedad:</span>
+                    <span className="text-gray-500 text-[10px]">Sin precedentes B×+</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-purple-100 flex justify-between items-center">
+                    <span className="font-bold text-rose-700">5. Cisne Negro:</span>
+                    <span className="text-rose-600 font-bold text-[10px]">Ignorancia radical</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Eje Z */}
+              <div className="border border-amber-200 rounded p-3.5 bg-amber-50/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
+                    Eje Z • Velocidad
+                  </span>
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
+                    Time-to-Impact (1..5)
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-600 leading-snug">
+                  Mide la <strong>ventana de materialización (Onset Speed)</strong> y determina si el banco puede responder mediante comités o exige controles en tiempo real.
+                </p>
+                <div className="space-y-1 pt-1 text-[11px]">
+                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">1. Muy Lenta:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">&gt; 6 meses</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">2. Gradual:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">1 a 6 meses</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                    <span className="font-bold text-gray-800">3. Rápida:</span>
+                    <span className="text-gray-500 font-mono text-[10px]">1 a 4 semanas</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                    <span className="font-bold text-amber-800">4. Aguda:</span>
+                    <span className="text-amber-700 font-mono text-[10px]">4 a 72 horas</span>
+                  </div>
+                  <div className="p-1.5 rounded bg-white border border-amber-100 flex justify-between items-center">
+                    <span className="font-bold text-rose-700">5. Instantánea:</span>
+                    <span className="text-rose-600 font-mono font-bold text-[10px]">&lt; 4 horas (Kill-Switch)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloque 3: Las 8 Familias de Riesgos Emergentes en Banco B×+ */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-indigo-600" />
+                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  3. Taxonomía de las 8 Familias de Riesgos Emergentes en B×+
+                </h4>
+              </div>
+              <span className="text-xs text-gray-500">Alineación WEF & CNBV Art. 88</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">1. Concentración Nube</span>
+                  <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">PR-TI-01</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Dependencia crítica de hiper-escaladores cloud o APIs de core sin sustituto ágil ni conmutación multiregión.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">2. Ciberataques IA</span>
+                  <span className="text-[10px] font-mono bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">PR-TI / PR-TES</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Ransomware destructivo, exploits zero-day y ataques coordinados automatizados sobre infraestructura transaccional.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">3. Fraude Sintético</span>
+                  <span className="text-[10px] font-mono bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">PR-CRED-02</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Deepfakes biométricos, identidades sintéticas generadas por IA y bypass de KYC en originación digital.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">4. Contagio Sistémico</span>
+                  <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">PR-TES-01</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Efecto dominó inter-procesos donde la falla en un nodo colateral impacta solvencia (ICAP) o liquidez (CCL).
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">5. Terceros / 4th Parties</span>
+                  <span className="text-[10px] font-mono bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">PR-CRED-02</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Brechas o discontinuidad en subcontratistas tecnológicos, despachos de valuación, notarías o corresponsales.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">6. Climático ESG</span>
+                  <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">PR-AGRO-01</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Choques físicos severos (sequías, estrés hídrico CONAGUA) que deterioran carteras agropecuarias simultáneamente.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">7. Liquidez Digital</span>
+                  <span className="text-[10px] font-mono bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded">PR-TES-01</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Corridas de depósitos 24/7 impulsadas por viralización en redes sociales y transferencias electrónicas masivas.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-gray-200 bg-gray-50/50 space-y-1.5 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-900">8. Modelos e IA Drift</span>
+                  <span className="text-[10px] font-mono bg-violet-100 text-violet-800 px-1.5 py-0.5 rounded">Transversal</span>
+                </div>
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  Deriva de modelos de score crediticio, sesgo algorítmico o alucinaciones en motores de decisión autónoma.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloque 4: Formulación Cuantitativa del Motor Python y Mitigación Vectorial */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Binary className="w-5 h-5 text-amber-500" />
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                4. Motor Cuantitativo Python (scripts/emerging_risk_cube_engine.py) & Mitigación Vectorial
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="bg-[#1F242B] text-gray-100 rounded p-4 font-mono space-y-2 border border-gray-800">
+                <div className="text-[#C0D725] font-bold text-[11px] flex items-center justify-between">
+                  <span># FÓRMULAS DEL MOTOR EN PYTHON</span>
+                  <span>v3.5 CUB Art. 88</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-gray-300">
+                  <p><span className="text-sky-400"># 1. Volumen Cúbico (1..125)</span></p>
+                  <p>V_inh = X_inh * Y_inh * Z_inh</p>
+                  <p>V_res = X_res * Y_res * Z_res</p>
+                  <p className="pt-1"><span className="text-sky-400"># 2. Factor de Sinergia Crítica</span></p>
+                  <p>gamma = 1.15 if (X_res &gt;= 4 and Z_res &gt;= 4) else 1.0</p>
+                  <p className="pt-1"><span className="text-sky-400"># 3. Tensor de Tensión 3D (1..100)</span></p>
+                  <p>T_3D = min(100.0, (0.45 * (V_res / 125.0) + 0.55 * (0.40*X^2 + 0.25*Y^2 + 0.35*Z^2) / 25.0) * 100 * gamma)</p>
+                  <p className="pt-1"><span className="text-sky-400"># 4. Score Homologado /25</span></p>
+                  <p>S_eq25 = round(T_3D / 4.0, 1)</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 text-xs text-gray-700">
+                <div className="p-2.5 rounded border border-gray-200 bg-gray-50/50">
+                  <strong className="text-gray-900 block mb-1">
+                    Mitigación Vectorial Diferenciada por Eje (ΔX, ΔY, ΔZ):
+                  </strong>
+                  <ul className="space-y-1 list-disc list-inside text-[11px]">
+                    <li><strong>Eje X (Contagio):</strong> Mitigado por aislamiento de arquitectura, redundancia BCP y contención de colaterales (hasta -45%).</li>
+                    <li><strong>Eje Y (Incertidumbre):</strong> Mitigado por sensores KRI, threat intelligence externa y calibración predictiva (hasta -40%).</li>
+                    <li>
+                      <strong className="text-rose-700">Regla de Velocidad Z ≥ 4:</strong> <em>Únicamente</em> controles clasificados como <code>AUTOMATED</code> y <code>ONLINE_REALTIME</code> tienen capacidad de frenar el eje Z (hasta -45%). Los controles manuales o mensuales se topan al 10%.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="p-2.5 rounded border border-amber-200 bg-amber-50/40 text-[11px]">
+                  <strong className="text-amber-900 block mb-1">
+                    Tope Art. 88 CUB para Controles No Formalizados (NF):
+                  </strong>
+                  Si un control no cuenta con formalización normativa institucional o evidencia válida comprobada (<code>isFormalized === false</code> o <code>hasValidEvidence === false</code>), su efectividad se topa automáticamente a un <strong>máximo del 20% (0.20)</strong>.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloque 5: Las 4 Zonas de Severidad y Matriz de Puntos Ciegos */}
+          <div className="bg-white rounded-bx p-5 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+              <Eye className="w-5 h-5 text-rose-600" />
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                5. Zonificación del Cubo 3D (125 Vóxeles) & Matriz de Puntos Ciegos (2D vs. 3D)
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded border border-rose-200 bg-rose-50/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-800">Zona Roja (Crítico)</span>
+                  <span className="bg-rose-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">V ≥ 64</span>
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  Volumen ≥ 64 o (X ≥ 4 y Z ≥ 4) o T_3D ≥ 68. Exige protocolo de contingencia inmediata y reporte al CAIR.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-amber-200 bg-amber-50/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-800">Zona Naranja (Alerta)</span>
+                  <span className="bg-amber-500 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">36 ≤ V &lt; 64</span>
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  Volumen entre 36 y 63 o X=5 o Z=5. Excede tolerancia institucional; requiere plan de acción Quick-Win 3LD.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-yellow-200 bg-yellow-50/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-yellow-800">Zona Amarilla (Vigilancia)</span>
+                  <span className="bg-yellow-500 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">15 ≤ V &lt; 36</span>
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  En incubación o con velocidad moderada. Monitoreo regular mediante indicadores KRI asociados.
+                </p>
+              </div>
+
+              <div className="p-3 rounded border border-emerald-200 bg-emerald-50/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-800">Zona Verde (Controlado)</span>
+                  <span className="bg-emerald-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">V &lt; 15</span>
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  Volumen &lt; 15 y T_3D &lt; 22. Dentro del apetito de riesgo emergente bajo control operativo ordinario.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-indigo-50/50 border border-indigo-200 rounded text-xs space-y-1 text-gray-700">
+              <strong className="text-indigo-900 block font-bold">
+                Diagnóstico de Gestión Paralela: &quot;Efecto Punto Ciego 2D vs. 3D&quot; (isBlindSpot2Dto3D)
+              </strong>
+              <p className="text-[11px] leading-relaxed">
+                El sistema detecta y etiqueta con una bandera institucional los riesgos clasificados en 
+                <strong className="text-emerald-700"> Verde</strong> o <strong className="text-yellow-700"> Amarillo</strong> en la matriz 2D que el Cubo 3D revela en 
+                <strong className="text-amber-700"> Naranja</strong> o <strong className="text-rose-700"> Rojo</strong>. 
+                Esto permite a la Dirección General y al Comité de Riesgos priorizar planes de mitigación en amenazas que antes eran estadísticamente invisibles.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-SECCIÓN 4: LOS 5 PILARES DE LA METODOLOGÍA HÍBRIDA */}
       {/* ========================================================================= */}
       {activeSubTab === "PILLARS" && (
         <div className="space-y-5 animate-in fade-in-50 duration-200">

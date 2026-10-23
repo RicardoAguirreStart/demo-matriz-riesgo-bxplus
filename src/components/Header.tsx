@@ -32,6 +32,7 @@ export function Header({
     { id: "flowchart", label: "Diagramador" },
     { id: "risks", label: "Matriz Viva" },
     { id: "heatmap", label: "Matriz 5x5" },
+    { id: "emerging-cube", label: "Matriz Riesgos Emergentes" },
     { id: "copilot", label: "Simulador" },
     { id: "plans", label: "Planes & Quick-Wins" },
     { id: "importer", label: "Importador" },

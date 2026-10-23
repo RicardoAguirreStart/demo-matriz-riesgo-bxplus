@@ -8,6 +8,7 @@ import { CopilotModal } from "@/components/CopilotModal";
 import { DashboardView } from "@/components/DashboardView";
 import { FlowchartView } from "@/components/FlowchartView";
 import { HeatmapView } from "@/components/HeatmapView";
+import { EmergingRisksCubeView } from "@/components/EmergingRisksCubeView";
 import { RiskAdminView } from "@/components/RiskAdminView";
 import { ActionPlansView } from "@/components/ActionPlansView";
 import { ImporterView } from "@/components/ImporterView";
@@ -52,6 +53,13 @@ export default function Home() {
 
         {activeTab === "heatmap" && (
           <HeatmapView businessLine={selectedBusinessLine} />
+        )}
+
+        {activeTab === "emerging-cube" && (
+          <EmergingRisksCubeView
+            currentRole={currentRole}
+            onNavigateToPlans={() => setActiveTab("plans")}
+          />
         )}
 
         {activeTab === "risks" && (
